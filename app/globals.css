@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #3b82f6;  /* blue-500 */
+  --primary-dark: #2563eb;  /* blue-600 */
+  --primary-light: #93c5fd;  /* blue-300 */
+  --secondary: #6b7280;  /* gray-500 */
+  --secondary-dark: #4b5563;  /* gray-600 */
+  --secondary-light: #9ca3af;  /* gray-400 */
+  --danger: #ef4444;  /* red-500 */
+  --success: #22c55e;  /* green-500 */
+  --warning: #f59e0b;  /* amber-500 */
+  --info: #06b6d4;  /* cyan-500 */
+  --foreground-rgb: 17, 24, 39;  /* gray-900 */
+  --background-rgb: 255, 255, 255;  /* white */
+  
+  /* Tema escuro personalizado */
+  --dark-background: #121827;
+  --dark-card-bg: #1a202c;
+  --dark-surface: #171e2e;
+  --dark-border: #2d3748;
+  --dark-text-primary: #f0f4f8;
+  --dark-text-secondary: #cbd5e0;
+  --dark-accent: #6c63ff;
+  --dark-accent-hover: #5a52d9;
+  --dark-success: #63db87;
+  --dark-danger: #f86a6a;
+  --dark-warning: #ffcd3c;
+  --dark-info: #4299ff;
+}
+
+html,
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  min-height: 100vh;
+}
+
+/* Tema escuro global - adiciona suporte ao modo escuro em toda a aplicação */
+.dark-theme {
+  background-color: var(--dark-background);
+  color: var(--dark-text-primary);
+}
+
+.dark-theme .card,
+.dark-theme .dark-card {
+  background-color: var(--dark-card-bg);
+  border-color: var(--dark-border);
+  color: var(--dark-text-primary);
+}
+
+.dark-theme .input,
+.dark-theme .dark-input {
+  background-color: var(--dark-surface);
+  border-color: var(--dark-border);
+  color: var(--dark-text-primary);
+}
+
+.dark-theme .btn-primary,
+.dark-theme .dark-btn-primary {
+  background-color: var(--dark-accent);
+  color: var(--dark-text-primary);
+}
+
+.dark-theme .btn-primary:hover,
+.dark-theme .dark-btn-primary:hover {
+  background-color: var(--dark-accent-hover);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors;
+  }
+
+  .btn-primary {
+    @apply bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-500 text-white hover:bg-gray-600 focus:ring-gray-500;
+  }
+
+  .btn-success {
+    @apply bg-green-500 text-white hover:bg-green-600 focus:ring-green-500;
+  }
+
+  .btn-danger {
+    @apply bg-red-500 text-white hover:bg-red-600 focus:ring-red-500;
+  }
+
+  .btn-warning {
+    @apply bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500;
+  }
+
+  .btn-info {
+    @apply bg-cyan-500 text-white hover:bg-cyan-600 focus:ring-cyan-500;
+  }
+
+  .card {
+    @apply bg-white shadow rounded-lg border border-gray-100 overflow-hidden;
+  }
+
+  .card-hover {
+    @apply hover:shadow-md transition-shadow duration-300;
+  }
+
+  .input {
+    @apply border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .badge-secondary {
+    @apply bg-gray-100 text-gray-800;
+  }
+
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .badge-warning {
+    @apply bg-amber-100 text-amber-800;
+  }
+
+  .badge-info {
+    @apply bg-cyan-100 text-cyan-800;
+  }
+  
+  /* Componentes específicos para o tema escuro */
+  .dark-btn {
+    @apply bg-gray-800 text-gray-200 border border-gray-700 hover:bg-gray-700;
+  }
+  
+  .dark-card {
+    @apply bg-gray-800 shadow-lg rounded-lg border border-gray-700 text-gray-200;
+  }
+  
+  .dark-input {
+    @apply bg-gray-700 border border-gray-600 text-gray-200 focus:ring-indigo-500 focus:border-indigo-500;
+  }
+  
+  .dark-badge {
+    @apply bg-gray-700 text-gray-200;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+} 
