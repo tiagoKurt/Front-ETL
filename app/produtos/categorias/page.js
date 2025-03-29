@@ -36,7 +36,7 @@ export default function CategoriasProdutos() {
   }, [produtos]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       <Header title="Categorias de Produtos" />
       
       <main className="p-6">
@@ -44,11 +44,11 @@ export default function CategoriasProdutos() {
           {/* Cabeçalho */}
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">Categorias</h2>
-              <p className="text-gray-600 mt-1">Gerencie as categorias de produtos do seu catálogo</p>
+              <h2 className="text-2xl font-bold text-indigo-300">Categorias</h2>
+              <p className="text-gray-300 mt-1">Gerencie as categorias de produtos do seu catálogo</p>
             </div>
             
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center font-medium hover:bg-blue-700 transition-colors">
+            <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center font-medium hover:bg-indigo-700 transition-colors">
               <FiPlus className="mr-2" />
               Nova Categoria
             </button>
@@ -59,15 +59,15 @@ export default function CategoriasProdutos() {
             {categorias.map((categoria, index) => (
               <div 
                 key={index} 
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow"
+                className="bg-gray-800 rounded-xl shadow-md border border-gray-700 p-6 hover:shadow-lg transition-shadow"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="font-bold text-lg text-gray-800">{categoria.nome}</h3>
+                  <h3 className="font-bold text-lg text-gray-100">{categoria.nome}</h3>
                   <div className="flex space-x-2">
-                    <button className="text-blue-600 hover:text-blue-800">
+                    <button className="text-indigo-300 hover:text-indigo-100">
                       <FiEdit />
                     </button>
-                    <button className="text-red-600 hover:text-red-800">
+                    <button className="text-red-400 hover:text-red-300">
                       <FiTrash2 />
                     </button>
                   </div>
@@ -75,16 +75,16 @@ export default function CategoriasProdutos() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Produtos</p>
-                    <p className="text-xl font-bold">{categoria.quantidade}</p>
+                    <p className="text-sm text-gray-400">Produtos</p>
+                    <p className="text-xl font-bold text-white">{categoria.quantidade}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Vendas</p>
-                    <p className="text-xl font-bold">{categoria.totalVendas}</p>
+                    <p className="text-sm text-gray-400">Vendas</p>
+                    <p className="text-xl font-bold text-white">{categoria.totalVendas}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-sm text-gray-500">Receita Total</p>
-                    <p className="text-xl font-bold text-green-600">
+                    <p className="text-sm text-gray-400">Receita Total</p>
+                    <p className="text-xl font-bold text-green-300">
                       R$ {categoria.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>

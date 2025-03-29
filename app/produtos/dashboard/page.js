@@ -41,6 +41,41 @@ export default function Dashboard() {
   const accentColor = '#6c63ff'; // Cor de destaque mais vibrante
   const borderColor = '#2d3748'; // Cor das bordas mais definida
 
+  // Após a definição das cores do tema, adicionar um conjunto de ícones melhorado
+  const chartIcons = {
+    barras: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M3 6h4v12H3V6zm6 0h4v12H9V6zm6 0h4v12h-4V6z" />
+      </svg>
+    ),
+    pizza: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
+        <path d="M12 12l8 0C20 7.58 16.42 4 12 4v8z" />
+      </svg>
+    ),
+    linha: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z" />
+      </svg>
+    ),
+    area: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+      </svg>
+    ),
+    treemap: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M3 3h8v10H3V3zm0 12h8v6H3v-6zm10 0h8v6h-8v-6zm0-12h8v10h-8V3z" />
+      </svg>
+    ),
+    dispersao: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M7 19h10V4H7v15zm-5-2h4V6H2v11zm16-11v11h4V6h-4z" />
+      </svg>
+    )
+  };
+
   useEffect(() => {
     // Garantir que os dados sejam carregados
     if (productData) {
@@ -163,81 +198,93 @@ export default function Dashboard() {
   // Efeito para atualizar dados quando o insight ou período mudar
   useEffect(() => {
     if (produtos.length > 0) {
-      // Análise por período (simulação de dados para diferentes períodos)
-      const dadosFiltrados = periodoAnalise === 'ultimos3meses' 
-        ? produtos.filter((_, index) => index % 3 === 0) 
-        : periodoAnalise === 'ultimos6meses' 
-          ? produtos.filter((_, index) => index % 2 === 0)
-          : produtos;
+      let dadosFiltrados = [...produtos];
       
-      if (!dadosFiltrados.length) {
-        setDadosAnaliseProdutos([]);
-        return;
-      }
-      
-      // Retornos diferentes baseados no insight ativo selecionado
-      let dados = [];
-      
-      switch (insightAtivo) {
-        case 'vendas':
-          dados = dadosFiltrados
-            .sort((a, b) => (b.vendasTotais || 0) - (a.vendasTotais || 0))
-            .slice(0, 8)
-            .map(produto => ({
-              nome: produto.nome,
-              vendas: produto.vendasTotais || 0,
-              receita: Math.round((produto.vendasTotais || 0) * produto.precoProduto),
-              categoria: produto.categoriaProduto
-            }));
-          break;
+      // Filtragem por período
+      if (periodoAnalise !== 'todos') {
+        const dataAtual = new Date();
+        const dataInicial = new Date();
         
-        case 'preco-estoque':
-          dados = dadosFiltrados
-            .slice(0, 15)
-            .map(produto => ({
-              nome: produto.nome,
-              preco: produto.precoProduto,
-              estoque: produto.quantidadeProduto,
-              tamanho: produto.quantidadeProduto * produto.precoProduto / 1000,
-              categoria: produto.categoriaProduto
-            }));
-          break;
-          
-        case 'rentabilidade':
-          // Simulando dados de margem de lucro (30-60% do preço)
-          dados = dadosFiltrados
-            .filter(produto => produto.vendasTotais > 0)
-            .slice(0, 8)
-            .map(produto => {
-              const custoProduto = produto.precoProduto * (0.4 + Math.random() * 0.3);
-              const lucro = produto.precoProduto - custoProduto;
-              const margemLucro = (lucro / produto.precoProduto) * 100;
-              
-              return {
-                nome: produto.nome,
-                preco: produto.precoProduto,
-                custo: Math.round(custoProduto * 100) / 100,
-                margem: Math.round(margemLucro * 10) / 10,
-                lucroTotal: Math.round((lucro * (produto.vendasTotais || 0)) * 100) / 100,
-                vendas: produto.vendasTotais || 0
-              };
-            });
-          break;
-          
-        default:
-          dados = dadosFiltrados.slice(0, 8).map(produto => ({
-            nome: produto.nome,
-            vendas: produto.vendasTotais || 0,
-            receita: Math.round((produto.vendasTotais || 0) * produto.precoProduto),
-            preco: produto.precoProduto,
-            estoque: produto.quantidadeProduto
-          }));
+        switch (periodoAnalise) {
+          case 'mes':
+            dataInicial.setMonth(dataAtual.getMonth() - 1);
+            break;
+          case 'trimestre':
+            dataInicial.setMonth(dataAtual.getMonth() - 3);
+            break;
+          case 'semestre':
+            dataInicial.setMonth(dataAtual.getMonth() - 6);
+            break;
+          case 'ano':
+            dataInicial.setFullYear(dataAtual.getFullYear() - 1);
+            break;
+        }
+        
+        dadosFiltrados = dadosFiltrados.filter(produto => {
+          const partes = produto.dataProducao.split('/');
+          const dataProduto = new Date(partes[2], partes[1] - 1, partes[0]);
+          return dataProduto >= dataInicial;
+        });
       }
       
-      setDadosAnaliseProdutos(dados);
+      // Processar dados de acordo com o insight ativo
+      let dadosProcessados = dadosFiltrados.map(produto => {
+        const margem = produto.custoProducao && produto.precoProduto 
+          ? (produto.precoProduto - produto.custoProducao) / produto.precoProduto 
+          : 0.3; // Valor padrão caso não haja dados
+        
+        return {
+          nome: produto.nome,
+          categoria: produto.categoriaProduto,
+          preco: produto.precoProduto,
+          custo: produto.custoProducao || produto.precoProduto * 0.7, // Estimativa caso não haja dados
+          estoque: produto.quantidadeProduto,
+          vendas: produto.vendasTotais || 0,
+          receita: (produto.vendasTotais || 0) * produto.precoProduto,
+          avaliacao: produto.ratingProduto,
+          dataProducao: produto.dataProducao,
+          dataExpiracao: produto.dataExpiracao,
+          margem: margem,
+          lucroTotal: margem * (produto.vendasTotais || 0) * produto.precoProduto
+        };
+      });
+      
+      // Ordenar com base no insight
+      if (insightAtivo === 'vendas') {
+        dadosProcessados = dadosProcessados.sort((a, b) => b.vendas - a.vendas);
+      } else if (insightAtivo === 'preco-estoque') {
+        dadosProcessados = dadosProcessados.sort((a, b) => b.estoque - a.estoque);
+      } else if (insightAtivo === 'rentabilidade') {
+        dadosProcessados = dadosProcessados.sort((a, b) => b.margem - a.margem);
+      }
+      
+      // Limitar a 10 itens para melhor visualização
+      dadosProcessados = dadosProcessados.slice(0, 10);
+      
+      setDadosAnaliseProdutos(dadosProcessados);
+      console.log('Dados processados para análise:', dadosProcessados.length);
     }
   }, [produtos, insightAtivo, periodoAnalise]);
 
+  // Função para preparar dados para gráficos
+  const prepararDadosParaGraficos = () => {
+    if (!dadosAnaliseProdutos || dadosAnaliseProdutos.length === 0) return [];
+    
+    const dadosProcessados = dadosAnaliseProdutos.slice(0, 8).map(item => ({
+      nome: item.nome.length > 20 ? `${item.nome.substring(0, 20)}...` : item.nome,
+      vendas: item.vendas,
+      receita: parseFloat((item.preco * item.vendas).toFixed(2)),
+      preco: parseFloat(item.preco.toFixed(2)),
+      estoque: item.estoque,
+      margem: parseFloat((item.margem * 100).toFixed(2)),
+      lucroTotal: parseFloat((item.preco * item.vendas * item.margem).toFixed(2)),
+      avaliacao: parseFloat(item.avaliacao.toFixed(1)),
+      dataEntrada: new Date(item.dataProducao).toLocaleDateString()
+    }));
+    
+    return dadosProcessados;
+  };
+  
   // Função para renderizar o gráfico de acordo com o tipo selecionado
   const renderizarGraficoInterativo = () => {
     // Garantir que temos dados para renderizar
@@ -249,6 +296,7 @@ export default function Dashboard() {
       );
     }
     
+    const dadosProcessados = prepararDadosParaGraficos();
     const tooltipStyle = { backgroundColor: '#171e2e', borderColor: '#2d3748', color: '#f0f4f8' };
     
     switch (tipoGraficoPersonalizado) {
@@ -256,43 +304,51 @@ export default function Dashboard() {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={dadosAnaliseProdutos}
-              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+              data={dadosProcessados}
+              margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-              <XAxis dataKey="nome" angle={-45} textAnchor="end" height={80} tick={{ fill: '#a0aec0' }} />
-              <YAxis tick={{ fill: '#a0aec0' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
+              <XAxis 
+                dataKey="nome" 
+                tick={{ fill: mutedTextColor }} 
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis yAxisId="left" tick={{ fill: mutedTextColor }} />
+              {insightAtivo === 'preco-estoque' && (
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: mutedTextColor }} />
+              )}
               <Tooltip contentStyle={tooltipStyle} />
-              <Legend formatter={(value) => <span style={{ color: '#a0aec0' }}>{value}</span>} />
+              <Legend formatter={(value) => <span style={{ color: mutedTextColor }}>{value}</span>} />
               {insightAtivo === 'vendas' && (
                 <>
-                  <Bar dataKey="vendas" fill="#8884d8" name="Vendas" />
-                  <Bar dataKey="receita" fill="#82ca9d" name="Receita (R$)" />
+                  <Bar yAxisId="left" dataKey="vendas" name="Vendas" fill={COLORS[0]} radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="receita" name="Receita (R$)" fill={COLORS[1]} radius={[4, 4, 0, 0]} />
                 </>
               )}
               {insightAtivo === 'preco-estoque' && (
                 <>
-                  <Bar dataKey="preco" fill="#ffc658" name="Preço (R$)" />
-                  <Bar dataKey="estoque" fill="#ff7300" name="Estoque (Un)" />
+                  <Bar yAxisId="left" dataKey="preco" name="Preço (R$)" fill={COLORS[2]} radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="estoque" name="Estoque (Un)" fill={COLORS[3]} radius={[4, 4, 0, 0]} />
                 </>
               )}
               {insightAtivo === 'rentabilidade' && (
                 <>
-                  <Bar dataKey="preco" fill="#8884d8" name="Preço (R$)" />
-                  <Bar dataKey="custo" fill="#82ca9d" name="Custo (R$)" />
-                  <Bar dataKey="margem" fill="#ffc658" name="Margem (%)" />
+                  <Bar yAxisId="left" dataKey="margem" name="Margem (%)" fill={COLORS[4]} radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="lucroTotal" name="Lucro Total (R$)" fill={COLORS[5]} radius={[4, 4, 0, 0]} />
                 </>
               )}
             </BarChart>
           </ResponsiveContainer>
         );
-        
+      
       case 'pizza':
         return (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={dadosAnaliseProdutos}
+                data={dadosProcessados}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -304,157 +360,238 @@ export default function Dashboard() {
                 nameKey="nome"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
               >
-                {dadosAnaliseProdutos.map((entry, index) => (
+                {dadosProcessados.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip contentStyle={tooltipStyle} />
-              <Legend formatter={(value) => <span style={{ color: '#a0aec0' }}>{value}</span>} />
+              <Legend formatter={(value) => <span style={{ color: mutedTextColor }}>{value}</span>} />
             </PieChart>
           </ResponsiveContainer>
         );
-        
+      
       case 'linha':
         return (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
-              data={dadosAnaliseProdutos}
-              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+              data={dadosProcessados}
+              margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-              <XAxis dataKey="nome" angle={-45} textAnchor="end" height={80} tick={{ fill: '#a0aec0' }} />
-              <YAxis tick={{ fill: '#a0aec0' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
+              <XAxis 
+                dataKey="nome" 
+                tick={{ fill: mutedTextColor }} 
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis yAxisId="left" tick={{ fill: mutedTextColor }} />
+              {insightAtivo === 'preco-estoque' && (
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: mutedTextColor }} />
+              )}
               <Tooltip contentStyle={tooltipStyle} />
-              <Legend formatter={(value) => <span style={{ color: '#a0aec0' }}>{value}</span>} />
+              <Legend formatter={(value) => <span style={{ color: mutedTextColor }}>{value}</span>} />
               {insightAtivo === 'vendas' && (
                 <>
-                  <Line type="monotone" dataKey="vendas" stroke="#8884d8" name="Vendas" strokeWidth={2} dot={{ r: 5 }} activeDot={{ r: 7 }} />
-                  <Line type="monotone" dataKey="receita" stroke="#82ca9d" name="Receita (R$)" strokeWidth={2} dot={{ r: 5 }} activeDot={{ r: 7 }} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="vendas"
+                    name="Vendas"
+                    stroke={COLORS[0]}
+                    strokeWidth={2}
+                    dot={{ fill: COLORS[0], r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="receita"
+                    name="Receita (R$)"
+                    stroke={COLORS[1]}
+                    strokeWidth={2}
+                    dot={{ fill: COLORS[1], r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
                 </>
               )}
               {insightAtivo === 'preco-estoque' && (
                 <>
-                  <Line type="monotone" dataKey="preco" stroke="#ffc658" name="Preço (R$)" strokeWidth={2} dot={{ r: 5 }} activeDot={{ r: 7 }} />
-                  <Line type="monotone" dataKey="estoque" stroke="#ff7300" name="Estoque (Un)" strokeWidth={2} dot={{ r: 5 }} activeDot={{ r: 7 }} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="preco"
+                    name="Preço (R$)"
+                    stroke={COLORS[2]}
+                    strokeWidth={2}
+                    dot={{ fill: COLORS[2], r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="estoque"
+                    name="Estoque (Un)"
+                    stroke={COLORS[3]}
+                    strokeWidth={2}
+                    dot={{ fill: COLORS[3], r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
                 </>
               )}
               {insightAtivo === 'rentabilidade' && (
                 <>
-                  <Line type="monotone" dataKey="margem" stroke="#ffc658" name="Margem (%)" strokeWidth={2} dot={{ r: 5 }} activeDot={{ r: 7 }} />
-                  <Line type="monotone" dataKey="lucroTotal" stroke="#8884d8" name="Lucro Total (R$)" strokeWidth={2} dot={{ r: 5 }} activeDot={{ r: 7 }} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="margem"
+                    name="Margem (%)"
+                    stroke={COLORS[4]}
+                    strokeWidth={2}
+                    dot={{ fill: COLORS[4], r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="lucroTotal"
+                    name="Lucro Total (R$)"
+                    stroke={COLORS[5]}
+                    strokeWidth={2}
+                    dot={{ fill: COLORS[5], r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
                 </>
               )}
             </LineChart>
           </ResponsiveContainer>
         );
       
-      case 'radar':
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart 
-              cx="50%" 
-              cy="50%" 
-              outerRadius="80%" 
-              data={dadosAnaliseProdutos.slice(0, 6)}
-              style={{ background: 'transparent' }}
-            >
-              <PolarGrid stroke="#2d3748" />
-              <PolarAngleAxis dataKey="nome" tick={{ fill: '#a0aec0' }} />
-              <PolarRadiusAxis angle={90} domain={[0, 'auto']} tick={{ fill: '#a0aec0' }} />
-              {insightAtivo === 'vendas' && (
-                <>
-                  <Radar 
-                    name="Vendas" 
-                    dataKey="vendas" 
-                    stroke="#8884d8" 
-                    fill="#8884d8" 
-                    fillOpacity={0.6} 
-                  />
-                  {dadosAnaliseProdutos[0]?.receita && (
-                    <Radar 
-                      name="Receita" 
-                      dataKey="receita" 
-                      stroke="#82ca9d" 
-                      fill="#82ca9d" 
-                      fillOpacity={0.6} 
-                    />
-                  )}
-                </>
-              )}
-              {insightAtivo === 'preco-estoque' && (
-                <>
-                  <Radar 
-                    name="Preço" 
-                    dataKey="preco" 
-                    stroke="#ffc658" 
-                    fill="#ffc658" 
-                    fillOpacity={0.6} 
-                  />
-                  <Radar 
-                    name="Estoque" 
-                    dataKey="estoque" 
-                    stroke="#ff7300" 
-                    fill="#ff7300" 
-                    fillOpacity={0.6} 
-                  />
-                </>
-              )}
-              {insightAtivo === 'rentabilidade' && (
-                <>
-                  <Radar 
-                    name="Margem" 
-                    dataKey="margem" 
-                    stroke="#ffc658" 
-                    fill="#ffc658" 
-                    fillOpacity={0.6} 
-                  />
-                  <Radar 
-                    name="Lucro" 
-                    dataKey="lucroTotal" 
-                    stroke="#8884d8" 
-                    fill="#8884d8" 
-                    fillOpacity={0.6} 
-                  />
-                </>
-              )}
-              <Legend formatter={(value) => <span style={{ color: '#a0aec0' }}>{value}</span>} />
-              <Tooltip contentStyle={tooltipStyle} />
-            </RadarChart>
-          </ResponsiveContainer>
-        );
-        
       case 'area':
         return (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={dadosAnaliseProdutos}
-              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+              data={dadosProcessados}
+              margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-              <XAxis dataKey="nome" angle={-45} textAnchor="end" height={80} tick={{ fill: '#a0aec0' }} />
-              <YAxis tick={{ fill: '#a0aec0' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
+              <XAxis 
+                dataKey="nome" 
+                tick={{ fill: mutedTextColor }} 
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis yAxisId="left" tick={{ fill: mutedTextColor }} />
+              {insightAtivo === 'preco-estoque' && (
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: mutedTextColor }} />
+              )}
               <Tooltip contentStyle={tooltipStyle} />
-              <Legend formatter={(value) => <span style={{ color: '#a0aec0' }}>{value}</span>} />
+              <Legend formatter={(value) => <span style={{ color: mutedTextColor }}>{value}</span>} />
               {insightAtivo === 'vendas' && (
                 <>
-                  <Area type="monotone" dataKey="vendas" stackId="1" stroke="#8884d8" fill="#8884d8" name="Vendas" />
-                  <Area type="monotone" dataKey="receita" stackId="2" stroke="#82ca9d" fill="#82ca9d" name="Receita (R$)" />
+                  <Area
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="vendas"
+                    name="Vendas"
+                    stroke={COLORS[0]}
+                    fill={COLORS[0]}
+                    fillOpacity={0.6}
+                  />
+                  <Area
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="receita"
+                    name="Receita (R$)"
+                    stroke={COLORS[1]}
+                    fill={COLORS[1]}
+                    fillOpacity={0.6}
+                  />
                 </>
               )}
               {insightAtivo === 'preco-estoque' && (
                 <>
-                  <Area type="monotone" dataKey="preco" stackId="1" stroke="#ffc658" fill="#ffc658" name="Preço (R$)" />
-                  <Area type="monotone" dataKey="estoque" stackId="2" stroke="#ff7300" fill="#ff7300" name="Estoque (Un)" />
+                  <Area
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="preco"
+                    name="Preço (R$)"
+                    stroke={COLORS[2]}
+                    fill={COLORS[2]}
+                    fillOpacity={0.6}
+                  />
+                  <Area
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="estoque"
+                    name="Estoque (Un)"
+                    stroke={COLORS[3]}
+                    fill={COLORS[3]}
+                    fillOpacity={0.6}
+                  />
                 </>
               )}
               {insightAtivo === 'rentabilidade' && (
                 <>
-                  <Area type="monotone" dataKey="preco" stackId="1" stroke="#8884d8" fill="#8884d8" name="Preço (R$)" />
-                  <Area type="monotone" dataKey="custo" stackId="2" stroke="#82ca9d" fill="#82ca9d" name="Custo (R$)" />
-                  <Area type="monotone" dataKey="margem" stackId="3" stroke="#ffc658" fill="#ffc658" name="Margem (%)" />
+                  <Area
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="margem"
+                    name="Margem (%)"
+                    stroke={COLORS[4]}
+                    fill={COLORS[4]}
+                    fillOpacity={0.6}
+                  />
+                  <Area
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="lucroTotal"
+                    name="Lucro Total (R$)"
+                    stroke={COLORS[5]}
+                    fill={COLORS[5]}
+                    fillOpacity={0.6}
+                  />
                 </>
               )}
             </AreaChart>
+          </ResponsiveContainer>
+        );
+      
+      case 'treemap':
+        const getTreemapData = () => {
+          let dataKey = '';
+          if (insightAtivo === 'vendas') {
+            dataKey = 'vendas';
+          } else if (insightAtivo === 'preco-estoque') {
+            dataKey = 'preco';
+          } else if (insightAtivo === 'rentabilidade') {
+            dataKey = 'margem';
+          }
+          
+          return dadosProcessados.map(item => ({
+            name: item.nome,
+            size: item[dataKey] || 0,
+            value: item[dataKey] || 0,
+            color: COLORS[dadosProcessados.indexOf(item) % COLORS.length]
+          }));
+        };
+        
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <Treemap
+              data={getTreemapData()}
+              dataKey="size"
+              aspectRatio={4 / 3}
+              stroke="#2d3748"
+              fill="#8884d8"
+              content={<CustomizedContent colors={COLORS} />}
+            >
+              <Tooltip 
+                formatter={(value, name) => [`${value}`, name]} 
+                contentStyle={tooltipStyle}
+              />
+            </Treemap>
           </ResponsiveContainer>
         );
       
@@ -462,52 +599,101 @@ export default function Dashboard() {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart
-              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
+              <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
               <XAxis 
                 type="number" 
-                dataKey={insightAtivo === 'preco-estoque' ? 'preco' : 
-                         insightAtivo === 'rentabilidade' ? 'custo' : 'vendas'}
-                name={insightAtivo === 'preco-estoque' ? 'Preço (R$)' : 
-                      insightAtivo === 'rentabilidade' ? 'Custo (R$)' : 'Vendas'}
-                tick={{ fill: '#a0aec0' }}
+                dataKey={insightAtivo === 'vendas' ? 'vendas' : insightAtivo === 'preco-estoque' ? 'preco' : 'margem'} 
+                name={insightAtivo === 'vendas' ? 'Vendas' : insightAtivo === 'preco-estoque' ? 'Preço (R$)' : 'Margem (%)'}
+                tick={{ fill: mutedTextColor }}
               />
               <YAxis 
                 type="number" 
-                dataKey={insightAtivo === 'preco-estoque' ? 'estoque' : 
-                         insightAtivo === 'rentabilidade' ? 'margem' : 'receita'}
-                name={insightAtivo === 'preco-estoque' ? 'Estoque' : 
-                      insightAtivo === 'rentabilidade' ? 'Margem (%)' : 'Receita (R$)'}
-                tick={{ fill: '#a0aec0' }}
+                dataKey={insightAtivo === 'vendas' ? 'receita' : insightAtivo === 'preco-estoque' ? 'estoque' : 'lucroTotal'} 
+                name={insightAtivo === 'vendas' ? 'Receita (R$)' : insightAtivo === 'preco-estoque' ? 'Estoque (Un)' : 'Lucro Total (R$)'}
+                tick={{ fill: mutedTextColor }}
               />
               <Tooltip 
-                cursor={{ strokeDasharray: '3 3' }} 
-                formatter={(value, name, props) => [value, props.payload.nome]} 
                 contentStyle={tooltipStyle}
+                formatter={(value, name) => [value, name]}
+                labelFormatter={(_, data) => data[0].payload.nome}
               />
-              <Legend formatter={(value) => <span style={{ color: '#a0aec0' }}>{value}</span>} />
+              <Legend formatter={(value) => <span style={{ color: mutedTextColor }}>{value}</span>} />
               <Scatter 
-                name={insightAtivo === 'preco-estoque' 
-                  ? 'Relação Preço x Estoque' 
-                  : insightAtivo === 'rentabilidade' 
-                    ? 'Relação Custo x Margem' 
-                    : 'Relação Vendas x Receita'
-                } 
-                data={dadosAnaliseProdutos} 
-                fill="#8884d8"
+                name={insightAtivo === 'vendas' 
+                  ? 'Vendas x Receita' 
+                  : insightAtivo === 'preco-estoque' 
+                    ? 'Preço x Estoque' 
+                    : 'Margem x Lucro Total'} 
+                data={dadosProcessados} 
+                fill={accentColor}
+                shape={(props) => {
+                  const size = Math.max(20, props.payload.avaliacao * 8); // Tamanho baseado na avaliação
+                  return (
+                    <circle 
+                      cx={props.cx} 
+                      cy={props.cy} 
+                      r={size / 3}
+                      fill={COLORS[dadosProcessados.indexOf(props.payload) % COLORS.length]}
+                      opacity={0.8}
+                    />
+                  );
+                }}
               />
             </ScatterChart>
           </ResponsiveContainer>
         );
-        
+      
       default:
-        return (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            Selecione um tipo de gráfico
-          </div>
-        );
+        return <div>Selecione um tipo de gráfico</div>;
     }
+  };
+
+  // Componente personalizado para renderizar cada célula do Treemap
+  const CustomizedContent = (props) => {
+    const { root, depth, x, y, width, height, index, colors, name, value } = props;
+    
+    return (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          style={{
+            fill: depth < 2 ? colors[index % colors.length] : 'none',
+            stroke: '#2d3748',
+            strokeWidth: 2 / (depth + 1e-10),
+            strokeOpacity: 1 / (depth + 1e-10),
+          }}
+        />
+        {depth === 1 && width > 40 && height > 40 ? (
+          <text
+            x={x + width / 2}
+            y={y + height / 2}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#fff"
+            fontSize={width > 100 ? 14 : 10}
+          >
+            {props.name}
+          </text>
+        ) : null}
+        {depth === 1 && width > 40 && height > 40 ? (
+          <text
+            x={x + width / 2}
+            y={y + height / 2 + 15}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#fff"
+            fontSize={width > 100 ? 12 : 8}
+          >
+            {props.value}
+          </text>
+        ) : null}
+      </g>
+    );
   };
 
   // Cálculos de KPIs
@@ -717,48 +903,42 @@ export default function Dashboard() {
                   className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'barras' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
                   title="Gráfico de barras"
                 >
-                  <FaChartBar size={18} />
+                  {chartIcons.barras}
                 </button>
                 <button 
                   onClick={() => setTipoGraficoPersonalizado('pizza')}
                   className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'pizza' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
                   title="Gráfico de pizza"
                 >
-                  <FaChartPie size={18} />
+                  {chartIcons.pizza}
                 </button>
                 <button 
                   onClick={() => setTipoGraficoPersonalizado('linha')}
                   className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'linha' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
                   title="Gráfico de linha"
                 >
-                  <FaChartLine size={18} />
+                  {chartIcons.linha}
                 </button>
                 <button 
                   onClick={() => setTipoGraficoPersonalizado('area')}
                   className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'area' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
                   title="Gráfico de área"
                 >
-                  <FaChartArea size={18} />
+                  {chartIcons.area}
                 </button>
                 <button 
-                  onClick={() => setTipoGraficoPersonalizado('radar')}
-                  className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'radar' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
-                  title="Gráfico de radar"
+                  onClick={() => setTipoGraficoPersonalizado('treemap')}
+                  className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'treemap' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+                  title="Gráfico de árvore"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
-                    <path d="M12 12l-4-4 4-4 4 4-4 4zm0 0l4 4-4 4-4-4 4-4z"/>
-                  </svg>
+                  {chartIcons.treemap}
                 </button>
                 <button 
                   onClick={() => setTipoGraficoPersonalizado('dispersao')}
                   className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'dispersao' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
                   title="Gráfico de dispersão"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="currentColor">
-                    <path d="M0 0h24v24H0z" fill="none"/>
-                    <path d="M7 19h10V4H7v15zm-5-2h4V6H2v11zm16-11v11h4V6h-4z"/>
-                  </svg>
+                  {chartIcons.dispersao}
                 </button>
               </div>
             </div>
