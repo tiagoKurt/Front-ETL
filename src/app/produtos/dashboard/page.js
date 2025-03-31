@@ -479,6 +479,134 @@ export default function Dashboard() {
           </ResponsiveContainer>
         );
       
+      case 'radar':
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart outerRadius={130} data={dadosProcessados}>
+              <PolarGrid stroke={borderColor} />
+              <PolarAngleAxis dataKey="nome" tick={{ fill: mutedTextColor }} />
+              <PolarRadiusAxis tick={{ fill: mutedTextColor }} />
+              <Tooltip 
+                contentStyle={tooltipStyle}
+                formatter={(value, name) => {
+                  if (name.includes('Preço') || name.includes('Receita') || name.includes('Lucro')) {
+                    return [formatadorMoeda(value), name];
+                  }
+                  return [value, name];
+                }}
+              />
+              <Legend formatter={(value) => <span style={{ color: mutedTextColor }}>{value}</span>} />
+              <Radar 
+                name={insightAtivo === 'vendas' ? 'Vendas' : 
+                      insightAtivo === 'preco-estoque' ? 'Preço' : 
+                      insightAtivo === 'rentabilidade' ? 'Margem (%)' : 
+                      insightAtivo === 'avaliacao-vendas' ? 'Avaliação' : 
+                      insightAtivo === 'estoque-rotatividade' ? 'Estoque' : 'Vendas'} 
+                dataKey={insightAtivo === 'vendas' ? 'vendas' : 
+                         insightAtivo === 'preco-estoque' ? 'preco' : 
+                         insightAtivo === 'rentabilidade' ? 'margem' : 
+                         insightAtivo === 'avaliacao-vendas' ? 'avaliacao' : 
+                         insightAtivo === 'estoque-rotatividade' ? 'estoque' : 'vendas'} 
+                stroke={COLORS[0]} 
+                fill={COLORS[0]} 
+                fillOpacity={0.6} 
+              />
+              <Radar 
+                name={insightAtivo === 'vendas' ? 'Receita' : 
+                      insightAtivo === 'preco-estoque' ? 'Estoque' : 
+                      insightAtivo === 'rentabilidade' ? 'Lucro Total' : 
+                      insightAtivo === 'avaliacao-vendas' ? 'Vendas' : 
+                      insightAtivo === 'estoque-rotatividade' ? 'Vendas' : 'Receita'} 
+                dataKey={insightAtivo === 'vendas' ? 'receita' : 
+                         insightAtivo === 'preco-estoque' ? 'estoque' : 
+                         insightAtivo === 'rentabilidade' ? 'lucroTotal' : 
+                         insightAtivo === 'avaliacao-vendas' ? 'vendas' : 
+                         insightAtivo === 'estoque-rotatividade' ? 'vendas' : 'receita'} 
+                stroke={COLORS[1]} 
+                fill={COLORS[1]} 
+                fillOpacity={0.6} 
+              />
+            </RadarChart>
+          </ResponsiveContainer>
+        );
+        
+      case 'composto':
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={dadosProcessados} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
+              <XAxis dataKey="nome" angle={-45} textAnchor="end" height={60} tick={{ fill: mutedTextColor }} />
+              <YAxis 
+                yAxisId="left" 
+                orientation="left" 
+                stroke={COLORS[0]} 
+                tick={{ fill: mutedTextColor }}
+                label={{ value: insightAtivo === 'vendas' ? 'Vendas' : 
+                                 insightAtivo === 'preco-estoque' ? 'Preço (R$)' : 
+                                 insightAtivo === 'rentabilidade' ? 'Margem (%)' : 
+                                 insightAtivo === 'avaliacao-vendas' ? 'Avaliação' : 
+                                 insightAtivo === 'estoque-rotatividade' ? 'Estoque' : 'Vendas', 
+                         angle: -90, position: 'insideLeft', fill: mutedTextColor }} 
+              />
+              <YAxis 
+                yAxisId="right" 
+                orientation="right" 
+                stroke={COLORS[1]} 
+                tick={{ fill: mutedTextColor }}
+                label={{ value: insightAtivo === 'vendas' ? 'Receita (R$)' : 
+                                 insightAtivo === 'preco-estoque' ? 'Estoque (Un)' : 
+                                 insightAtivo === 'rentabilidade' ? 'Lucro Total (R$)' : 
+                                 insightAtivo === 'avaliacao-vendas' ? 'Vendas' : 
+                                 insightAtivo === 'estoque-rotatividade' ? 'Vendas' : 'Receita (R$)', 
+                         angle: 90, position: 'insideRight', fill: mutedTextColor }} 
+              />
+              <Tooltip 
+                contentStyle={tooltipStyle}
+                formatter={(value, name) => {
+                  if (name.includes('Preço') || name.includes('Receita') || name.includes('Lucro')) {
+                    return [formatadorMoeda(value), name];
+                  }
+                  return [value, name];
+                }}
+              />
+              <Legend formatter={(value) => <span style={{ color: mutedTextColor }}>{value}</span>} />
+              <Bar 
+                yAxisId="left" 
+                dataKey={insightAtivo === 'vendas' ? 'vendas' : 
+                         insightAtivo === 'preco-estoque' ? 'preco' : 
+                         insightAtivo === 'rentabilidade' ? 'margem' : 
+                         insightAtivo === 'avaliacao-vendas' ? 'avaliacao' : 
+                         insightAtivo === 'estoque-rotatividade' ? 'estoque' : 'vendas'} 
+                name={insightAtivo === 'vendas' ? 'Vendas' : 
+                      insightAtivo === 'preco-estoque' ? 'Preço (R$)' : 
+                      insightAtivo === 'rentabilidade' ? 'Margem (%)' : 
+                      insightAtivo === 'avaliacao-vendas' ? 'Avaliação' : 
+                      insightAtivo === 'estoque-rotatividade' ? 'Estoque' : 'Vendas'} 
+                fill={COLORS[0]} 
+                barSize={30} 
+              />
+              <Line 
+                yAxisId="right" 
+                type="monotone" 
+                dataKey={insightAtivo === 'vendas' ? 'receita' : 
+                         insightAtivo === 'preco-estoque' ? 'estoque' : 
+                         insightAtivo === 'rentabilidade' ? 'lucroTotal' : 
+                         insightAtivo === 'avaliacao-vendas' ? 'vendas' : 
+                         insightAtivo === 'estoque-rotatividade' ? 'vendas' : 'receita'}
+                name={insightAtivo === 'vendas' ? 'Receita (R$)' : 
+                      insightAtivo === 'preco-estoque' ? 'Estoque (Un)' : 
+                      insightAtivo === 'rentabilidade' ? 'Lucro Total (R$)' : 
+                      insightAtivo === 'avaliacao-vendas' ? 'Vendas' : 
+                      insightAtivo === 'estoque-rotatividade' ? 'Vendas' : 'Receita (R$)'} 
+                stroke={COLORS[1]} 
+                strokeWidth={3} 
+                dot={{ r: 5, fill: COLORS[1] }} 
+                activeDot={{ r: 7 }} 
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        );
+      
       default:
         return (
           <div className="flex items-center justify-center h-full text-gray-300">
@@ -761,6 +889,24 @@ export default function Dashboard() {
                     title="Gráfico de dispersão"
                   >
                     {chartIcons.dispersao}
+                  </button>
+                  <button 
+                    onClick={() => setTipoGraficoPersonalizado('radar')}
+                    className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'radar' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+                    title="Gráfico de radar"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8zm1 3H9v2h4v2h2V9c0-1.1-.9-2-2-2zm1.5 9l-2.25-4h-1.5L10.5 16H9l2 4h4l2-4h-1.5z" />
+                    </svg>
+                  </button>
+                  <button 
+                    onClick={() => setTipoGraficoPersonalizado('composto')}
+                    className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'composto' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+                    title="Gráfico composto"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                      <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm2 4v-2H3v2h2zm16-2h-6v2h6v-2zm-8 2h2v-2h-2v2zm-4 0h2v-2H9v2zM5 3H3v2h2V3zm4 0H7v2h2V3zm4 0h-2v2h2V3zm8 0h-6v2h6V3zm0 4h-6v2h6V7zm0 4h-6v2h6v-2zM5 7H3v2h2V7zm4 0H7v2h2V7zm4 0h-2v2h2V7z" />
+                    </svg>
                   </button>
                 </div>
               </div>
