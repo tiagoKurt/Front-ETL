@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { FiPackage, FiTrendingUp, FiStar, FiDollarSign, FiClock, FiCalendar, FiFilter, FiDownload, FiRefreshCw, FiBarChart2, FiPieChart, FiTrendingDown, FiShoppingBag } from 'react-icons/fi';
+import { FiPackage, FiTrendingUp, FiStar, FiDollarSign, FiClock, FiCalendar, FiFilter, FiDownload, FiRefreshCw, FiBarChart2, FiPieChart, FiTrendingDown, FiShoppingBag, FiBox, FiTag, FiLayers } from 'react-icons/fi';
 import Header from '../../components/Header';
 import InsightsSection from '../../components/InsightsSection';
 import { productData } from '../../utils/data/productData';
@@ -17,8 +17,8 @@ import {
   ComposedChart,
   Treemap
 } from 'recharts';
-import { FaChartBar, FaChartPie, FaChartLine, FaChartArea, FaFilter, FaLightbulb } from 'react-icons/fa';
-import { BsFillCartCheckFill, BsTags, BsCashCoin, BsStarHalf } from 'react-icons/bs';
+import { FaChartBar, FaChartPie, FaChartLine, FaChartArea, FaFilter, FaLightbulb, FaPalette, FaRulerCombined } from 'react-icons/fa';
+import { BsFillCartCheckFill, BsTags, BsCashCoin, BsStarHalf, BsRulers, BsPalette } from 'react-icons/bs';
 
 export default function Dashboard() {
   const [produtos, setProdutos] = useState([]);
@@ -33,6 +33,10 @@ export default function Dashboard() {
   const [periodoAnalise, setPeriodoAnalise] = useState('todos');
   const [loading, setLoading] = useState(true);
   const [dadosAnaliseProdutos, setDadosAnaliseProdutos] = useState([]);
+  const [mostrarDimensoes, setMostrarDimensoes] = useState(false);
+  const [mostrarVariacoesCores, setMostrarVariacoesCores] = useState(false);
+  const [mostrarAnaliseEspacial, setMostrarAnaliseEspacial] = useState(false);
+  const [tagSelecionada, setTagSelecionada] = useState('todas');
 
   // Paleta de cores para o tema escuro - cores melhoradas para visualização
   const COLORS = ['#8a85f7', '#82e9c1', '#ffdd63', '#ff8c40', '#4299ff', '#00ddb2', '#ffcd3c', '#ff9455'];
@@ -687,6 +691,519 @@ export default function Dashboard() {
       }))
     : [];
 
+  // Nova função para extrair cores únicas
+  const coresUnicas = useMemo(() => {
+    if (!produtos.length) return [];
+    
+    const cores = new Set();
+    produtos.forEach(produto => {
+      if (produto.cor) {
+        cores.add(produto.cor);
+      }
+    });
+    
+    return Array.from(cores);
+  }, [produtos]);
+
+  // Nova função para extrair tamanhos únicos
+  const tamanhosUnicos = useMemo(() => {
+    if (!produtos.length) return [];
+    
+    const tamanhos = new Set();
+    produtos.forEach(produto => {
+      if (produto.tamanho) {
+        tamanhos.add(produto.tamanho);
+      }
+    });
+    
+    return Array.from(tamanhos);
+  }, [produtos]);
+
+  // Nova função para análise de tags
+  const analiseTags = useMemo(() => {
+    if (!produtos.length) return [];
+    
+    const tagMap = new Map();
+    let totalVendas = 0;
+    
+    produtos.forEach(produto => {
+      if (produto.tagsProdutos) {
+        const tags = produto.tagsProdutos.split(',');
+        const vendas = produto.vendasTotais || 0;
+        totalVendas += vendas;
+        
+        tags.forEach(tag => {
+          const tagTrim = tag.trim();
+          if (!tagMap.has(tagTrim)) {
+            tagMap.set(tagTrim, { 
+              tag: tagTrim, 
+              vendas: 0, 
+              receita: 0, 
+              quantidade: 0,
+              ratingMedio: 0,
+              totalRating: 0 
+            });
+          }
+          
+          const tagData = tagMap.get(tagTrim);
+          tagData.vendas += vendas;
+          tagData.receita += vendas * produto.precoProduto;
+          tagData.quantidade += 1;
+          tagData.totalRating += produto.ratingProduto;
+          tagData.ratingMedio = tagData.totalRating / tagData.quantidade;
+        });
+      }
+    });
+    
+    // Converter o Map para array e calcular a taxa de conversão
+    return Array.from(tagMap.values())
+      .map(item => ({
+        ...item,
+        taxaConversao: (item.vendas / (totalVendas || 1) * 100).toFixed(1)
+      }))
+      .sort((a, b) => b.vendas - a.vendas);
+  }, [produtos]);
+
+  // Nova função para análise de dimensões
+  const analiseDimensoes = useMemo(() => {
+    if (!produtos.length) return {
+      medidasMedidas: { altura: 0, largura: 0, comprimento: 0 },
+      produtosMaiores: [],
+      produtosMenores: [],
+      volumeTotal: 0,
+      volumeMedio: 0
+    };
+    
+    // Calcular volume de cada produto e estatísticas
+    const produtosComVolume = produtos
+      .filter(produto => produto.Altura && produto.Largura && produto.Comprimento)
+      .map(produto => {
+        const volume = produto.Altura * produto.Largura * produto.Comprimento;
+        return { ...produto, volume };
+      });
+    
+    if (!produtosComVolume.length) return {
+      medidasMedidas: { altura: 0, largura: 0, comprimento: 0 },
+      produtosMaiores: [],
+      produtosMenores: [],
+      volumeTotal: 0,
+      volumeMedio: 0
+    };
+    
+    // Calcular médias
+    const somaAltura = produtosComVolume.reduce((acc, prod) => acc + prod.Altura, 0);
+    const somaLargura = produtosComVolume.reduce((acc, prod) => acc + prod.Largura, 0);
+    const somaComprimento = produtosComVolume.reduce((acc, prod) => acc + prod.Comprimento, 0);
+    const somaVolume = produtosComVolume.reduce((acc, prod) => acc + prod.volume, 0);
+    
+    // Ordenar por volume
+    const ordenadosPorVolume = [...produtosComVolume].sort((a, b) => b.volume - a.volume);
+    
+    return {
+      medidasMedias: {
+        altura: (somaAltura / produtosComVolume.length).toFixed(1),
+        largura: (somaLargura / produtosComVolume.length).toFixed(1),
+        comprimento: (somaComprimento / produtosComVolume.length).toFixed(1)
+      },
+      produtosMaiores: ordenadosPorVolume.slice(0, 5),
+      produtosMenores: ordenadosPorVolume.slice(-5).reverse(),
+      volumeTotal: somaVolume.toFixed(2),
+      volumeMedio: (somaVolume / produtosComVolume.length).toFixed(2),
+      dadosGrafico: produtosComVolume.map(p => ({
+        nome: p.nome,
+        volume: p.volume,
+        vendas: p.vendasTotais || 0,
+        cor: p.cor || 'N/A',
+        categoria: p.categoriaProduto
+      }))
+    };
+  }, [produtos]);
+
+  // Nova função para análise de correlação entre dimensões e vendas
+  const correlacaoDimensoesVendas = useMemo(() => {
+    if (!produtos.length) return { dadosScatter: [], correlacao: 0 };
+    
+    const produtosValidos = produtos.filter(
+      p => p.Altura && p.Largura && p.Comprimento && p.vendasTotais
+    );
+    
+    if (!produtosValidos.length) return { dadosScatter: [], correlacao: 0 };
+    
+    // Calcular volume e preparar dados para gráfico de dispersão
+    const dadosScatter = produtosValidos.map(p => {
+      const volume = p.Altura * p.Largura * p.Comprimento;
+      return {
+        nome: p.nome,
+        volume,
+        vendas: p.vendasTotais || 0
+      };
+    });
+    
+    // Calcular correlação entre volume e vendas (coeficiente de Pearson)
+    const mediaVolume = dadosScatter.reduce((acc, item) => acc + item.volume, 0) / dadosScatter.length;
+    const mediaVendas = dadosScatter.reduce((acc, item) => acc + item.vendas, 0) / dadosScatter.length;
+    
+    let numerador = 0;
+    let denominador1 = 0;
+    let denominador2 = 0;
+    
+    dadosScatter.forEach(item => {
+      const diffVolume = item.volume - mediaVolume;
+      const diffVendas = item.vendas - mediaVendas;
+      
+      numerador += diffVolume * diffVendas;
+      denominador1 += diffVolume * diffVolume;
+      denominador2 += diffVendas * diffVendas;
+    });
+    
+    const correlacao = denominador1 && denominador2 
+      ? (numerador / Math.sqrt(denominador1 * denominador2)).toFixed(2)
+      : 0;
+    
+    return { dadosScatter, correlacao };
+  }, [produtos]);
+
+  // Nova função para análise de popularidade por cor
+  const analisePopularidadeCores = useMemo(() => {
+    if (!produtos.length) return [];
+    
+    const coresMap = new Map();
+    
+    produtos.forEach(produto => {
+      const cor = produto.cor || 'N/A';
+      const vendas = produto.vendasTotais || 0;
+      
+      if (!coresMap.has(cor)) {
+        coresMap.set(cor, { 
+          cor, 
+          vendas: 0, 
+          quantidade: 0, 
+          ratingMedio: 0,
+          totalRating: 0,
+          receita: 0 
+        });
+      }
+      
+      const corData = coresMap.get(cor);
+      corData.vendas += vendas;
+      corData.quantidade += 1;
+      corData.totalRating += produto.ratingProduto;
+      corData.ratingMedio = corData.totalRating / corData.quantidade;
+      corData.receita += vendas * produto.precoProduto;
+    });
+    
+    return Array.from(coresMap.values())
+      .sort((a, b) => b.vendas - a.vendas);
+  }, [produtos]);
+
+  // Nova função para análise de popularidade por tamanho
+  const analisePopularidadeTamanhos = useMemo(() => {
+    if (!produtos.length) return [];
+    
+    const tamanhosMap = new Map();
+    
+    produtos.forEach(produto => {
+      const tamanho = produto.tamanho || 'N/A';
+      const vendas = produto.vendasTotais || 0;
+      
+      if (!tamanhosMap.has(tamanho)) {
+        tamanhosMap.set(tamanho, { 
+          tamanho, 
+          vendas: 0, 
+          quantidade: 0,
+          ratingMedio: 0,
+          totalRating: 0,
+          receita: 0
+        });
+      }
+      
+      const tamanhoData = tamanhosMap.get(tamanho);
+      tamanhoData.vendas += vendas;
+      tamanhoData.quantidade += 1;
+      tamanhoData.totalRating += produto.ratingProduto;
+      tamanhoData.ratingMedio = tamanhoData.totalRating / tamanhoData.quantidade;
+      tamanhoData.receita += vendas * produto.precoProduto;
+    });
+    
+    return Array.from(tamanhosMap.values())
+      .sort((a, b) => b.vendas - a.vendas);
+  }, [produtos]);
+
+  // Adicionar seção de renderização para análise de dimensões
+  const renderizarAnaliseDimensoes = () => {
+    if (!analiseDimensoes.produtosMaiores.length) {
+      return (
+        <div className="p-4 bg-gray-800 rounded-lg shadow-md text-center">
+          <p className="text-gray-300">Não há dados de dimensões suficientes para análise</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+        <div className="bg-gray-800 rounded-lg shadow-md p-4">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <FaRulerCombined className="mr-2" /> Dimensões Médias dos Produtos
+          </h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-gray-700 p-3 rounded-md text-center">
+              <p className="text-sm text-gray-400">Altura</p>
+              <p className="text-xl font-bold text-white">{analiseDimensoes.medidasMedias.altura} cm</p>
+            </div>
+            <div className="bg-gray-700 p-3 rounded-md text-center">
+              <p className="text-sm text-gray-400">Largura</p>
+              <p className="text-xl font-bold text-white">{analiseDimensoes.medidasMedias.largura} cm</p>
+            </div>
+            <div className="bg-gray-700 p-3 rounded-md text-center">
+              <p className="text-sm text-gray-400">Comprimento</p>
+              <p className="text-xl font-bold text-white">{analiseDimensoes.medidasMedias.comprimento} cm</p>
+            </div>
+          </div>
+          <div className="mt-4 bg-gray-700 p-3 rounded-md text-center">
+            <p className="text-sm text-gray-400">Volume Médio</p>
+            <p className="text-xl font-bold text-white">{analiseDimensoes.volumeMedio} cm³</p>
+          </div>
+        </div>
+        
+        <div className="bg-gray-800 rounded-lg shadow-md p-4">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <FiBox className="mr-2" /> Correlação entre Volume e Vendas
+          </h3>
+          {correlacaoDimensoesVendas.correlacao !== 0 ? (
+            <div>
+              <div className="mb-4 bg-gray-700 p-3 rounded-md text-center">
+                <p className="text-sm text-gray-400">Coeficiente de Correlação</p>
+                <p className="text-xl font-bold text-white">{correlacaoDimensoesVendas.correlacao}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {correlacaoDimensoesVendas.correlacao > 0.5 ? 'Forte correlação positiva' : 
+                   correlacaoDimensoesVendas.correlacao < -0.5 ? 'Forte correlação negativa' : 
+                   correlacaoDimensoesVendas.correlacao > 0.3 ? 'Correlação positiva moderada' :
+                   correlacaoDimensoesVendas.correlacao < -0.3 ? 'Correlação negativa moderada' :
+                   'Correlação fraca ou inexistente'}
+                </p>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart
+                    margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                    background={chartBackground}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
+                    <XAxis 
+                      dataKey="volume" 
+                      name="Volume" 
+                      type="number" 
+                      stroke={textColor}
+                      label={{ value: 'Volume (cm³)', position: 'insideBottomRight', offset: -5, fill: textColor }}
+                    />
+                    <YAxis 
+                      dataKey="vendas" 
+                      name="Vendas" 
+                      stroke={textColor}
+                      label={{ value: 'Vendas', angle: -90, position: 'insideLeft', fill: textColor }}
+                    />
+                    <Tooltip 
+                      formatter={(value, name) => [value, name === 'volume' ? 'Volume (cm³)' : 'Vendas']}
+                      labelFormatter={(value) => `Volume: ${value.toFixed(2)} cm³`}
+                    />
+                    <Scatter name="Produtos" data={correlacaoDimensoesVendas.dadosScatter} fill={accentColor} />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-gray-400 p-8">
+              Não foi possível calcular a correlação devido a dados insuficientes
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Adicionar seção de renderização para análise de tags
+  const renderizarAnaliseTags = () => {
+    if (!analiseTags.length) {
+      return (
+        <div className="p-4 bg-gray-800 rounded-lg shadow-md text-center">
+          <p className="text-gray-300">Não há dados de tags suficientes para análise</p>
+        </div>
+      );
+    }
+    
+    const tagsTop = analiseTags.slice(0, 10);
+    
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+        <div className="bg-gray-800 rounded-lg shadow-md p-4">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <FiTag className="mr-2" /> Top 10 Tags mais Populares
+          </h3>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={tagsTop}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                background={chartBackground}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
+                <XAxis type="number" stroke={textColor} />
+                <YAxis type="category" dataKey="tag" stroke={textColor} width={80} />
+                <Tooltip
+                  formatter={(value) => [`${value}`, 'Vendas']}
+                  contentStyle={{ backgroundColor: cardBackground, border: 'none' }}
+                />
+                <Legend />
+                <Bar dataKey="vendas" fill={accentColor} name="Vendas" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        
+        <div className="bg-gray-800 rounded-lg shadow-md p-4">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <BsTags className="mr-2" /> Desempenho das Tags
+          </h3>
+          <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto pr-2">
+            {tagsTop.map((tag, index) => (
+              <div key={index} className="bg-gray-700 p-3 rounded-md">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-white">{tag.tag}</span>
+                  <span className="text-sm text-gray-300">{tag.quantidade} produtos</span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-sm">
+                  <div>
+                    <p className="text-gray-400">Vendas</p>
+                    <p className="text-white font-semibold">{tag.vendas}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Rating</p>
+                    <p className="text-white font-semibold">{tag.ratingMedio.toFixed(1)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Conversão</p>
+                    <p className="text-white font-semibold">{tag.taxaConversao}%</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Adicionar seção de renderização para análise de cores e tamanhos
+  const renderizarAnaliseCoresTamanhos = () => {
+    const dadosCores = analisePopularidadeCores;
+    const dadosTamanhos = analisePopularidadeTamanhos;
+    
+    if (!dadosCores.length || !dadosTamanhos.length) {
+      return (
+        <div className="p-4 bg-gray-800 rounded-lg shadow-md text-center">
+          <p className="text-gray-300">Não há dados de cores ou tamanhos suficientes para análise</p>
+        </div>
+      );
+    }
+    
+    // Preparar dados para gráficos
+    const dadosGraficoCores = dadosCores.slice(0, 8).map((item, index) => ({
+      ...item,
+      fill: COLORS[index % COLORS.length]
+    }));
+    
+    const dadosGraficoTamanhos = dadosTamanhos.slice(0, 8);
+    
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+        <div className="bg-gray-800 rounded-lg shadow-md p-4">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <BsPalette className="mr-2" /> Análise de Vendas por Cor
+          </h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={dadosGraficoCores}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  dataKey="vendas"
+                  nameKey="cor"
+                  label={(entry) => entry.cor}
+                >
+                  {dadosGraficoCores.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name, props) => [value, 'Vendas']}
+                  contentStyle={{ backgroundColor: cardBackground, border: 'none' }}
+                  labelFormatter={(value) => `Cor: ${value}`}
+                />
+                <Legend layout="vertical" verticalAlign="middle" align="right" />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="bg-gray-700 p-3 rounded-md text-center">
+              <p className="text-sm text-gray-400">Cor mais popular</p>
+              <p className="text-xl font-bold text-white">{dadosCores[0]?.cor || 'N/A'}</p>
+            </div>
+            <div className="bg-gray-700 p-3 rounded-md text-center">
+              <p className="text-sm text-gray-400">Vendas</p>
+              <p className="text-xl font-bold text-white">{dadosCores[0]?.vendas || 0}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-gray-800 rounded-lg shadow-md p-4">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <BsRulers className="mr-2" /> Análise de Vendas por Tamanho
+          </h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={dadosGraficoTamanhos}
+                margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
+                background={chartBackground}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
+                <XAxis 
+                  dataKey="tamanho" 
+                  stroke={textColor}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  tickMargin={10}
+                />
+                <YAxis stroke={textColor} />
+                <Tooltip
+                  formatter={(value) => [`${value}`, 'Vendas']}
+                  contentStyle={{ backgroundColor: cardBackground, border: 'none' }}
+                />
+                <Legend />
+                <Bar dataKey="vendas" fill={accentColor} name="Vendas" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="bg-gray-700 p-3 rounded-md text-center">
+              <p className="text-sm text-gray-400">Tamanho mais popular</p>
+              <p className="text-xl font-bold text-white">{dadosTamanhos[0]?.tamanho || 'N/A'}</p>
+            </div>
+            <div className="bg-gray-700 p-3 rounded-md text-center">
+              <p className="text-sm text-gray-400">Vendas</p>
+              <p className="text-xl font-bold text-white">{dadosTamanhos[0]?.vendas || 0}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-4">
       <Header titulo="Dashboard de Produtos" subtitulo="Visão geral de desempenho e métricas-chave" />
@@ -980,6 +1497,133 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+
+            {/* Adicionar novas seções na análise personalizada */}
+            <section className="mt-8">
+              <div className="bg-gradient-to-r from-indigo-800 to-purple-800 rounded-lg p-4 shadow-lg mb-4">
+                <h2 className="text-xl font-bold flex items-center">
+                  <FaLightbulb className="mr-2" /> Análise Personalizada
+                </h2>
+                <p className="text-sm text-gray-200 mt-1">
+                  Visualize insights profundos com base nos dados e descubra oportunidades para impulsionar seus resultados.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <button 
+                  onClick={() => setMostrarDimensoes(!mostrarDimensoes)}
+                  className={`p-4 rounded-lg shadow-md flex items-center justify-between transition-all duration-300 ${
+                    mostrarDimensoes ? 'bg-indigo-700' : 'bg-gray-800 hover:bg-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <FiBox className="text-xl mr-3" />
+                    <span className="font-medium">Análise de Dimensões</span>
+                  </div>
+                  <span className="text-xs bg-gray-900 px-2 py-1 rounded">
+                    {mostrarDimensoes ? 'Ativo' : 'Inativo'}
+                  </span>
+                </button>
+
+                <button 
+                  onClick={() => setMostrarVariacoesCores(!mostrarVariacoesCores)}
+                  className={`p-4 rounded-lg shadow-md flex items-center justify-between transition-all duration-300 ${
+                    mostrarVariacoesCores ? 'bg-indigo-700' : 'bg-gray-800 hover:bg-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <FaPalette className="text-xl mr-3" />
+                    <span className="font-medium">Cores e Tamanhos</span>
+                  </div>
+                  <span className="text-xs bg-gray-900 px-2 py-1 rounded">
+                    {mostrarVariacoesCores ? 'Ativo' : 'Inativo'}
+                  </span>
+                </button>
+
+                <button 
+                  onClick={() => setMostrarAnaliseEspacial(!mostrarAnaliseEspacial)}
+                  className={`p-4 rounded-lg shadow-md flex items-center justify-between transition-all duration-300 ${
+                    mostrarAnaliseEspacial ? 'bg-indigo-700' : 'bg-gray-800 hover:bg-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <FiTag className="text-xl mr-3" />
+                    <span className="font-medium">Análise de Tags</span>
+                  </div>
+                  <span className="text-xs bg-gray-900 px-2 py-1 rounded">
+                    {mostrarAnaliseEspacial ? 'Ativo' : 'Inativo'}
+                  </span>
+                </button>
+              </div>
+
+              {mostrarDimensoes && renderizarAnaliseDimensoes()}
+              {mostrarVariacoesCores && renderizarAnaliseCoresTamanhos()}
+              {mostrarAnaliseEspacial && renderizarAnaliseTags()}
+              
+              <div className="bg-gray-800 rounded-lg shadow-md p-4 mt-8">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                  <FaLightbulb className="mr-2" /> Insights Principais das Novas Análises
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-700 p-4 rounded-md">
+                    <h4 className="font-medium text-indigo-300 flex items-center">
+                      <FiBox className="mr-2" /> Dimensões e Espaço
+                    </h4>
+                    <p className="text-gray-300 mt-2 text-sm">
+                      Produtos de {correlacaoDimensoesVendas.correlacao > 0 ? 'maior' : 'menor'} volume tendem a ter 
+                      {correlacaoDimensoesVendas.correlacao > 0 ? ' mais' : ' menos'} vendas, com uma correlação de 
+                      {Math.abs(parseFloat(correlacaoDimensoesVendas.correlacao)) > 0.5 ? ' forte' : 
+                       Math.abs(parseFloat(correlacaoDimensoesVendas.correlacao)) > 0.3 ? ' moderada' : ' fraca'} 
+                      ({correlacaoDimensoesVendas.correlacao}). Otimize seu estoque considerando o volume médio de {analiseDimensoes.volumeMedio} cm³.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-700 p-4 rounded-md">
+                    <h4 className="font-medium text-indigo-300 flex items-center">
+                      <FiTag className="mr-2" /> Performance de Tags
+                    </h4>
+                    <p className="text-gray-300 mt-2 text-sm">
+                      As tags mais associadas a vendas altas são {analiseTags.length > 0 ? 
+                        `"${analiseTags[0]?.tag}", "${analiseTags[1]?.tag}" e "${analiseTags[2]?.tag}"` : 
+                        'indisponíveis'}. 
+                      Produtos com estas tags convertem em média {analiseTags.length > 0 ? 
+                        `${(parseFloat(analiseTags[0]?.taxaConversao) + parseFloat(analiseTags[1]?.taxaConversao) + parseFloat(analiseTags[2]?.taxaConversao))/3}%` : 
+                        '0%'} melhor que os demais.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-700 p-4 rounded-md">
+                    <h4 className="font-medium text-indigo-300 flex items-center">
+                      <FaPalette className="mr-2" /> Preferência de Cores e Tamanhos
+                    </h4>
+                    <p className="text-gray-300 mt-2 text-sm">
+                      {analisePopularidadeCores.length > 0 ? `A cor "${analisePopularidadeCores[0]?.cor}" é a mais popular,` : 'Dados de cores insuficientes,'} 
+                      representando {analisePopularidadeCores.length > 0 ? 
+                        `${((analisePopularidadeCores[0]?.vendas / produtos.reduce((acc, prod) => acc + (prod.vendasTotais || 0), 0)) * 100).toFixed(1)}%` : 
+                        '0%'} das vendas totais.
+                      {analisePopularidadeTamanhos.length > 0 ? ` O tamanho "${analisePopularidadeTamanhos[0]?.tamanho}" é o mais vendido` : ''}. 
+                      Considere expandir suas variações nestas características.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-700 p-4 rounded-md">
+                    <h4 className="font-medium text-indigo-300 flex items-center">
+                      <FiLayers className="mr-2" /> Otimização de Portfólio
+                    </h4>
+                    <p className="text-gray-300 mt-2 text-sm">
+                      Produtos com a combinação de {analisePopularidadeCores.length > 0 && analisePopularidadeTamanhos.length > 0 ? 
+                        `cor "${analisePopularidadeCores[0]?.cor}" e tamanho "${analisePopularidadeTamanhos[0]?.tamanho}"` : 
+                        'cores e tamanhos populares'} apresentam melhor performance. 
+                      As dimensões médias ideais para novos produtos são aproximadamente 
+                      {analiseDimensoes.medidasMedias ? 
+                        ` ${analiseDimensoes.medidasMedias.altura}×${analiseDimensoes.medidasMedias.largura}×${analiseDimensoes.medidasMedias.comprimento} cm` : 
+                        ' indisponíveis'}.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
           </>
         )}
       </div>
