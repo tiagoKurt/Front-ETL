@@ -1,5 +1,3 @@
-import { productData } from './data/productData';
-
 // Função para formatar valores monetários em reais com duas casas decimais
 export const formataMoeda = (valor) => {
   return valor.toLocaleString('pt-BR', { 
@@ -19,8 +17,8 @@ export const formataNumero = (valor) => {
 };
 
 // Insights sobre produtos mais vendidos
-export const produtosMaisVendidos = () => {
-  return [...productData]
+export const produtosMaisVendidos = (produtos = []) => {
+  return [...produtos]
     .sort((a, b) => (b.vendasTotais || 0) - (a.vendasTotais || 0))
     .slice(0, 5)
     .map(produto => ({
@@ -32,10 +30,10 @@ export const produtosMaisVendidos = () => {
 };
 
 // Insights sobre categorias mais rentáveis
-export const categoriasMaisRentaveis = () => {
+export const categoriasMaisRentaveis = (produtos = []) => {
   const categorias = {};
   
-  productData.forEach(produto => {
+  produtos.forEach(produto => {
     const categoria = produto.categoriaProduto;
     const vendas = produto.vendasTotais || 0;
     const receita = vendas * produto.precoProduto;
@@ -66,10 +64,10 @@ export const categoriasMaisRentaveis = () => {
 };
 
 // Insights sobre produtos com baixo estoque
-export const produtosBaixoEstoque = () => {
+export const produtosBaixoEstoque = (produtos = []) => {
   const estoqueMinimo = 20; // Definição do que é considerado estoque baixo
   
-  return [...productData]
+  return [...produtos]
     .filter(produto => produto.quantidadeProduto < estoqueMinimo)
     .sort((a, b) => a.quantidadeProduto - b.quantidadeProduto)
     .map(produto => ({
@@ -82,11 +80,11 @@ export const produtosBaixoEstoque = () => {
 };
 
 // Insights sobre produtos com alto potencial de crescimento (boa avaliação mas vendas moderadas)
-export const produtosComPotencialCrescimento = () => {
+export const produtosComPotencialCrescimento = (produtos = []) => {
   const vendasModeras = 400; // Limite para considerar vendas moderadas
   const bomRating = 4.5; // Limite para considerar uma boa avaliação
   
-  return [...productData]
+  return [...produtos]
     .filter(produto => 
       (produto.vendasTotais || 0) < vendasModeras && 
       produto.ratingProduto >= bomRating
@@ -103,12 +101,12 @@ export const produtosComPotencialCrescimento = () => {
 };
 
 // Insights sobre produtos próximos da data de expiração
-export const produtosComExpiracaoProxima = () => {
+export const produtosComExpiracaoProxima = (produtos = []) => {
   const dataAtual = new Date();
   const tresMesesAdiante = new Date();
   tresMesesAdiante.setMonth(dataAtual.getMonth() + 3);
   
-  return [...productData]
+  return [...produtos]
     .filter(prod => {
       if (prod.dataExpiracao === 'N/A') return false;
       
@@ -126,7 +124,7 @@ export const produtosComExpiracaoProxima = () => {
 };
 
 // Insights sobre relação entre rating e vendas
-export const relacaoRatingVendas = () => {
+export const relacaoRatingVendas = (produtos = []) => {
   const result = {
     ratingAltoVendasAltas: 0,
     ratingBaixoVendasAltas: 0,
@@ -143,7 +141,7 @@ export const relacaoRatingVendas = () => {
   const vendasPorRating = {};
   const contagemPorRating = {};
   
-  productData.forEach(produto => {
+  produtos.forEach(produto => {
     const rating = produto.ratingProduto.toFixed(1);
     const vendas = produto.vendasTotais || 0;
     
@@ -177,23 +175,44 @@ export const relacaoRatingVendas = () => {
 };
 
 // Dados consolidados para dashboard
-export const dadosConsolidados = () => {
+export const dadosConsolidados = (produtos = []) => {
+  if (produtos.length === 0) {
+    return {
+      totalProdutos: 0,
+      totalVendas: 0,
+      receitaTotal: 0,
+      estoqueTotal: 0,
+      mediaRating: "0.00",
+      distribuicaoCategorias: {},
+      topProdutoMaisCaro: { nome: "", preco: 0 },
+      topProdutoMaisBarato: { nome: "", preco: 0 },
+      ratioEstoqueVendas: 0
+    };
+  }
+
   // Totais gerais
-  const totalProdutos = productData.length;
-  const totalVendas = productData.reduce((acc, prod) => acc + (prod.vendasTotais || 0), 0);
-  const receitaTotal = productData.reduce((acc, prod) => acc + ((prod.vendasTotais || 0) * prod.precoProduto), 0);
-  const estoqueTotal = productData.reduce((acc, prod) => acc + prod.quantidadeProduto, 0);
+  const totalProdutos = produtos.length;
+  const totalVendas = produtos.reduce((acc, prod) => acc + (prod.vendasTotais || 0), 0);
+  const receitaTotal = produtos.reduce((acc, prod) => acc + ((prod.vendasTotais || 0) * prod.precoProduto), 0);
+  const estoqueTotal = produtos.reduce((acc, prod) => acc + prod.quantidadeProduto, 0);
   
   // Média de rating
-  const mediaRating = productData.reduce((acc, prod) => acc + prod.ratingProduto, 0) / totalProdutos;
+  const mediaRating = totalProdutos > 0 
+    ? produtos.reduce((acc, prod) => acc + prod.ratingProduto, 0) / totalProdutos
+    : 0;
   
   // Produto mais caro e mais barato
-  const produtoMaisCaro = [...productData].sort((a, b) => b.precoProduto - a.precoProduto)[0];
-  const produtoMaisBarato = [...productData].sort((a, b) => a.precoProduto - b.precoProduto)[0];
+  const produtoMaisCaro = produtos.length > 0 
+    ? [...produtos].sort((a, b) => b.precoProduto - a.precoProduto)[0]
+    : { nome: "", precoProduto: 0 };
+    
+  const produtoMaisBarato = produtos.length > 0 
+    ? [...produtos].sort((a, b) => a.precoProduto - b.precoProduto)[0]
+    : { nome: "", precoProduto: 0 };
   
   // Distribuição de produtos por categoria
   const distribuicaoCategorias = {};
-  productData.forEach(produto => {
+  produtos.forEach(produto => {
     const categoria = produto.categoriaProduto;
     if (!distribuicaoCategorias[categoria]) {
       distribuicaoCategorias[categoria] = 0;
@@ -216,6 +235,6 @@ export const dadosConsolidados = () => {
       nome: produtoMaisBarato.nome,
       preco: parseFloat(produtoMaisBarato.precoProduto.toFixed(2))
     },
-    ratioEstoqueVendas: parseFloat((estoqueTotal / totalVendas).toFixed(2))
+    ratioEstoqueVendas: totalVendas > 0 ? parseFloat((estoqueTotal / totalVendas).toFixed(2)) : 0
   };
 }; 

@@ -20,16 +20,16 @@ import {
   ResponsiveContainer
 } from 'recharts';
 
-export default function InsightsSection() {
+export default function InsightsSection({ produtos = [] }) {
   const [activeTab, setActiveTab] = useState('visaoGeral');
   
   // Obter dados
-  const consolidados = dadosConsolidados();
-  const topProdutos = produtosMaisVendidos();
-  const topCategorias = categoriasMaisRentaveis();
-  const baixoEstoque = produtosBaixoEstoque();
-  const potencialCrescimento = produtosComPotencialCrescimento();
-  const expiracaoProxima = produtosComExpiracaoProxima();
+  const consolidados = dadosConsolidados(produtos);
+  const topProdutos = produtosMaisVendidos(produtos);
+  const topCategorias = categoriasMaisRentaveis(produtos);
+  const baixoEstoque = produtosBaixoEstoque(produtos);
+  const potencialCrescimento = produtosComPotencialCrescimento(produtos);
+  const expiracaoProxima = produtosComExpiracaoProxima(produtos);
   
   // Cores para gráficos
   const COLORS = ['#8a85f7', '#82e9c1', '#ffdd63', '#ff8c40', '#4299ff', '#00ddb2', '#ffcd3c', '#ff9455'];
@@ -255,7 +255,7 @@ export default function InsightsSection() {
                   <tr key={index} className="hover:bg-gray-750">
                     <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-teal-300">{produto.nome}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-300">{produto.categoria}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-green-400 font-medium">{produto.rating.toFixed(1)}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-300">{produto.rating} / 5</td>
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-300">{produto.vendas.toLocaleString()}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-300">{produto.estoque}</td>
                   </tr>
@@ -269,33 +269,49 @@ export default function InsightsSection() {
   );
   
   return (
-    <div className="mb-10">
-      <h2 className="text-xl font-semibold text-gray-100 mb-6">Insights de Análise</h2>
-      
-      <div className="flex border-b border-gray-700 mb-6">
-        <button 
-          className={`py-3 px-4 font-medium text-sm border-b-2 ${activeTab === 'visaoGeral' ? 'border-indigo-500 text-indigo-300' : 'border-transparent text-gray-400 hover:text-gray-300'}`}
-          onClick={() => setActiveTab('visaoGeral')}
-        >
-          Visão Geral
-        </button>
-        <button 
-          className={`py-3 px-4 font-medium text-sm border-b-2 ${activeTab === 'alertas' ? 'border-amber-500 text-amber-300' : 'border-transparent text-gray-400 hover:text-gray-300'}`}
-          onClick={() => setActiveTab('alertas')}
-        >
-          Alertas
-        </button>
-        <button 
-          className={`py-3 px-4 font-medium text-sm border-b-2 ${activeTab === 'oportunidades' ? 'border-teal-500 text-teal-300' : 'border-transparent text-gray-400 hover:text-gray-300'}`}
-          onClick={() => setActiveTab('oportunidades')}
-        >
-          Oportunidades
-        </button>
+    <div className="mb-8">
+      <div className="mb-6">
+        <div className="flex space-x-2 md:space-x-4 mb-4 overflow-x-auto pb-2 scrollbar-thin">
+          <button 
+            onClick={() => setActiveTab('visaoGeral')} 
+            className={`px-4 py-2 text-sm rounded-md whitespace-nowrap transition-colors duration-200 ${
+              activeTab === 'visaoGeral' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            Visão Geral
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('alertas')} 
+            className={`px-4 py-2 text-sm rounded-md whitespace-nowrap transition-colors duration-200 ${
+              activeTab === 'alertas' 
+                ? 'bg-amber-600 text-white' 
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            Alertas de Estoque
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('oportunidades')} 
+            className={`px-4 py-2 text-sm rounded-md whitespace-nowrap transition-colors duration-200 ${
+              activeTab === 'oportunidades' 
+                ? 'bg-teal-600 text-white' 
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            Oportunidades de Crescimento
+          </button>
+        </div>
       </div>
       
-      {activeTab === 'visaoGeral' && renderVisaoGeral()}
-      {activeTab === 'alertas' && renderAlertas()}
-      {activeTab === 'oportunidades' && renderOportunidades()}
+      <div>
+        {activeTab === 'visaoGeral' && renderVisaoGeral()}
+        {activeTab === 'alertas' && renderAlertas()}
+        {activeTab === 'oportunidades' && renderOportunidades()}
+      </div>
     </div>
   );
 } 
