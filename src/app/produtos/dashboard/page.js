@@ -879,7 +879,7 @@ export default function Dashboard() {
     const coresMap = new Map();
     
     produtos.forEach(produto => {
-      const cor = produto.corProduto || 'N/A';
+      const cor = produto.cor || 'N/A';
       const estoque = produto.quantidadeProduto || 0;
       
       if (!coresMap.has(cor)) {
@@ -969,6 +969,11 @@ export default function Dashboard() {
 
   // Nova função para análise de estoque por cor - Otimizada
   const analiseEstoquePorCor = useMemo(() => {
+    // Se os cálculos já foram realizados e a análise não está sendo mostrada, retorne array vazio
+    if (calcCoresTamanhosRealizado && !mostrarVariacoesCores) {
+      return [];
+    }
+    
     // Se a análise está sendo ativada, marque que o carregamento começou
     if (mostrarVariacoesCores && !calcCoresTamanhosRealizado) {
       setLoadingCoresTamanhos(true);
@@ -1058,6 +1063,68 @@ export default function Dashboard() {
     setCalcCoresTamanhosRealizado(false);
     setCalcTagsRealizado(false);
   }, [produtos]);
+
+  // Análise de dimensões dos produtos - implementação usando useMemo
+  const analiseDimensoes = useMemo(() => {
+    // Se a análise não está sendo mostrada e já foi calculada, retorne um objeto vazio
+    if (calcDimensoesRealizado && !mostrarDimensoes) {
+      return { produtosMaiores: [], medidasMedias: { altura: 0, largura: 0, comprimento: 0 }, volumeMedio: 0 };
+    }
+    
+    // Se a análise está sendo ativada, marque que o carregamento começou
+    if (mostrarDimensoes && !calcDimensoesRealizado) {
+      setLoadingDimensoes(true);
+    }
+    
+    if (!produtos.length) {
+      return { produtosMaiores: [], medidasMedias: { altura: 0, largura: 0, comprimento: 0 }, volumeMedio: 0 };
+    }
+    
+    // Filtrar produtos com dimensões válidas
+    const produtosComDimensoes = produtos.filter(
+      p => p.Altura && p.Largura && p.Comprimento
+    );
+    
+    if (!produtosComDimensoes.length) {
+      return { produtosMaiores: [], medidasMedias: { altura: 0, largura: 0, comprimento: 0 }, volumeMedio: 0 };
+    }
+    
+    // Calcular dimensões médias
+    const somaAltura = produtosComDimensoes.reduce((acc, p) => acc + p.Altura, 0);
+    const somaLargura = produtosComDimensoes.reduce((acc, p) => acc + p.Largura, 0);
+    const somaComprimento = produtosComDimensoes.reduce((acc, p) => acc + p.Comprimento, 0);
+    
+    const medidasMedias = {
+      altura: (somaAltura / produtosComDimensoes.length).toFixed(2),
+      largura: (somaLargura / produtosComDimensoes.length).toFixed(2),
+      comprimento: (somaComprimento / produtosComDimensoes.length).toFixed(2)
+    };
+    
+    // Calcular volume médio
+    const volumeMedio = (
+      (somaAltura / produtosComDimensoes.length) * 
+      (somaLargura / produtosComDimensoes.length) * 
+      (somaComprimento / produtosComDimensoes.length)
+    ).toFixed(2);
+    
+    // Ordenar produtos por volume (do maior para o menor)
+    const produtosComVolume = produtosComDimensoes.map(p => ({
+      ...p,
+      volume: p.Altura * p.Largura * p.Comprimento
+    }));
+    
+    const produtosMaiores = [...produtosComVolume]
+      .sort((a, b) => b.volume - a.volume)
+      .slice(0, 5);
+    
+    // Marcar que os cálculos foram realizados e desativar o loading
+    if (mostrarDimensoes) {
+      setCalcDimensoesRealizado(true);
+      setLoadingDimensoes(false);
+    }
+    
+    return { produtosMaiores, medidasMedias, volumeMedio };
+  }, [produtos, mostrarDimensoes, calcDimensoesRealizado]);
 
   // Adicionar seção de renderização para análise de dimensões - Otimizada
   const renderizarAnaliseDimensoes = () => {
