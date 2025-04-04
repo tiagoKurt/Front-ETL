@@ -157,16 +157,17 @@ export default function Dashboard() {
   const metricas = useMemo(() => {
     if (!produtos.length) return {
       totalProdutos: 0,
-      totalVendas: 0,
+      totalEstoque: 0,
       mediaRating: 0,
-      receitaTotal: 0,
+      valorTotalEstoque: 0,
       garantiaMedia: 0,
       proximosExpiracao: 0
     };
 
-    const vendas = produtos.reduce((acc, prod) => acc + (prod.vendasTotais || 0), 0);
-    const receita = produtos.reduce((acc, prod) => acc + ((prod.vendasTotais || 0) * prod.precoProduto), 0);
-    const garantia = produtos.reduce((acc, prod) => acc + prod.periodoGarantia, 0) / produtos.length;
+    const totalEstoque = produtos.reduce((acc, prod) => acc + prod.quantidadeProduto, 0);
+    const valorEstoque = produtos.reduce((acc, prod) => acc + (prod.quantidadeProduto * prod.precoProduto), 0);
+    const mediaRating = produtos.reduce((acc, prod) => acc + prod.ratingProduto, 0) / produtos.length;
+    const garantia = produtos.reduce((acc, prod) => acc + (prod.periodoGarantia || 0), 0) / produtos.length;
     
     const dataAtual = new Date();
     const tresMesesAdiante = new Date();
@@ -175,18 +176,21 @@ export default function Dashboard() {
     const produtosExpirandoEmBreve = produtos.filter(prod => {
       if (prod.dataExpiracao === 'N/A') return false;
       
-      const partes = prod.dataExpiracao.split('/');
-      const dataExpiracao = new Date(partes[2], partes[1] - 1, partes[0]);
-      
-      return dataExpiracao > dataAtual && dataExpiracao < tresMesesAdiante;
+      try {
+        const partes = prod.dataExpiracao.split('/');
+        const dataExpiracao = new Date(partes[2], partes[1] - 1, partes[0]);
+        return dataExpiracao > dataAtual && dataExpiracao <= tresMesesAdiante;
+      } catch(e) {
+        return false;
+      }
     });
 
     return {
       totalProdutos: produtos.length,
-      totalVendas: vendas,
-      mediaRating: (produtos.reduce((acc, prod) => acc + prod.ratingProduto, 0) / produtos.length).toFixed(1),
-      receitaTotal: receita.toFixed(2),
-      garantiaMedia: garantia.toFixed(1),
+      totalEstoque: totalEstoque,
+      mediaRating: mediaRating,
+      valorTotalEstoque: valorEstoque,
+      garantiaMedia: garantia,
       proximosExpiracao: produtosExpirandoEmBreve.length
     };
   }, [produtos]);
@@ -1404,7 +1408,18 @@ export default function Dashboard() {
             setTimeout(() => {
               fetchProdutos();
             }, 3000);
+            return;
           }
+          
+          // Verificar se precisamos atualizar os dados
+          if (data.length !== produtos.length) {
+            console.log('Quantidade de produtos mudou, atualizando dados...');
+            fetchProdutos();
+            return;
+          }
+          
+          // Tudo está ok, não precisamos fazer nada
+          console.log('API disponível e dados atualizados');
         } catch (err) {
           console.error('Erro ao verificar disponibilidade:', err);
           setProdutos([]);

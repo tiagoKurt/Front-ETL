@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { FiDownload, FiFilter, FiCheckSquare, FiUpload, FiCopy } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
+import { FiDownload, FiFilter, FiCheckSquare, FiUpload, FiCopy, FiRefreshCw } from 'react-icons/fi';
 import Header from '../../components/Header';
-import { productData } from '../../utils/data/productData';
+
 
 export default function ExportarDados() {
   const [formatoExportacao, setFormatoExportacao] = useState('csv');
+  const [produtos, setProdutos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [camposSelecionados, setCamposSelecionados] = useState({
     id: true,
     nome: true,
@@ -18,8 +21,42 @@ export default function ExportarDados() {
     dataProducao: false,
     dataExpiracao: false,
     ratingProduto: true,
-    vendasTotais: true
   });
+
+  useEffect(() => {
+    fetchProdutos();
+  }, []);
+
+  // Função para buscar produtos da API
+  const fetchProdutos = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch('https://backendapimongo.tigasolutions.com.br/api/v1/todos');
+      
+      if (!response.ok) {
+        setError(`Erro ao buscar dados: ${response.status}`);
+        console.error(`Erro ao buscar dados: ${response.status}`);
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (!data || data.length === 0) {
+        setError('Nenhum dado encontrado na API');
+        console.warn('Nenhum dado encontrado na API');
+        return;
+      }
+      
+      console.log('Dados carregados da API:', data.length);
+      setProdutos(data);
+      setError(null);
+      setLoading(false);
+    } catch (err) {
+      setError(`Erro: ${err.message}`);
+      console.error('Erro ao buscar dados da API:', err);
+    }
+  };
 
   const campos = [
     { id: 'id', nome: 'ID do Produto' },
@@ -32,7 +69,6 @@ export default function ExportarDados() {
     { id: 'dataProducao', nome: 'Data de Produção' },
     { id: 'dataExpiracao', nome: 'Data de Expiração' },
     { id: 'ratingProduto', nome: 'Rating' },
-    { id: 'vendasTotais', nome: 'Total de Vendas' }
   ];
 
   const handleChangeCampo = (id) => {
@@ -51,11 +87,14 @@ export default function ExportarDados() {
   };
 
   const gerarDadosExemplo = () => {
-    const produtos = productData.slice(0, 3);
+    if (!produtos || produtos.length === 0) {
+      return "Carregando dados...";
+    }
+
     const dadosFiltrados = produtos.map(produto => {
       const dadoProduto = {};
       Object.keys(camposSelecionados).forEach(campo => {
-        if (camposSelecionados[campo]) {
+        if (camposSelecionados[campo] && produto[campo] !== undefined) {
           dadoProduto[campo] = produto[campo];
         }
       });
@@ -64,10 +103,11 @@ export default function ExportarDados() {
 
     switch (formatoExportacao) {
       case 'json':
-        return JSON.stringify(dadosFiltrados, null, 2);
+        return JSON.stringify(dadosFiltrados.slice(0, 5), null, 2);
       case 'csv':
+        if (dadosFiltrados.length === 0) return "Nenhum dado disponível";
         const headers = Object.keys(dadosFiltrados[0]).join(',');
-        const rows = dadosFiltrados.map(p => Object.values(p).join(','));
+        const rows = dadosFiltrados.slice(0, 5).map(p => Object.values(p).join(','));
         return [headers, ...rows].join('\n');
       case 'excel':
         return 'Dados serão exportados em formato Excel...';
@@ -89,6 +129,13 @@ export default function ExportarDados() {
               Selecione os campos, o formato e filtre os dados que deseja exportar.
             </p>
           </div>
+          
+          {/* Mensagem de erro */}
+          {error && (
+            <div className="bg-red-500 text-white p-4 rounded-lg mb-6">
+              <p>{error}</p>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Painel de configuração */}
@@ -244,6 +291,14 @@ export default function ExportarDados() {
                 <button className="px-4 py-2 bg-gray-700 text-gray-200 rounded-lg font-medium hover:bg-gray-600 flex items-center">
                   <FiUpload className="mr-2" />
                   Importar
+                </button>
+                <button 
+                  onClick={fetchProdutos}
+                  className="px-4 py-2 bg-gray-700 text-gray-200 rounded-lg font-medium hover:bg-gray-600 flex items-center"
+                  disabled={loading}
+                >
+                  <FiRefreshCw className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Atualizar Dados
                 </button>
                 <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 flex items-center">
                   <FiDownload className="mr-2" />

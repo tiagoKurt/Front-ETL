@@ -3,13 +3,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FiPlus, FiEdit, FiTrash2 } from 'react-icons/fi';
 import Header from '../../components/Header';
-import { productData } from '../../utils/data/productData';
+
 
 export default function CategoriasProdutos() {
   const [produtos, setProdutos] = useState([]);
 
   useEffect(() => {
-    setProdutos(productData);
+    
   }, []);
 
   const categorias = useMemo(() => {

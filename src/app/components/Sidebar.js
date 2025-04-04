@@ -54,7 +54,7 @@ export default function Sidebar() {
       path: '/produtos/categorias',
     },
     {
-      name: 'Vendas',
+      name: 'Inventário',
       icon: <FiTrendingUp />,
       path: '/produtos/vendas',
     },
