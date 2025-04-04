@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { FiPackage, FiTrendingUp, FiStar, FiDollarSign, FiClock, FiCalendar, FiFilter, FiDownload, FiRefreshCw, FiBarChart2, FiPieChart, FiTrendingDown, FiShoppingBag, FiBox, FiTag, FiLayers, FiAlertCircle } from 'react-icons/fi';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FiPackage, FiTrendingUp, FiStar, FiDollarSign, FiClock, FiCalendar, FiFilter, FiDownload, FiRefreshCw, FiBarChart2, FiPieChart, FiTrendingDown, FiShoppingBag, FiBox, FiTag, FiLayers, FiAlertCircle, FiGrid, FiBriefcase, FiSettings, FiList, FiActivity, FiShield, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 import Header from '../../components/Header';
 import InsightsSection from '../../components/InsightsSection';
 import { formataMoeda } from '../../utils/insightData';
@@ -28,7 +28,7 @@ export default function Dashboard() {
     rating: 0
   });
   const [tipoGraficoPersonalizado, setTipoGraficoPersonalizado] = useState('barras');
-  const [insightAtivo, setInsightAtivo] = useState('vendas');
+  const [insightAtivo, setInsightAtivo] = useState('inventario');
   const [periodoAnalise, setPeriodoAnalise] = useState('todos');
   const [loading, setLoading] = useState(true);
   const [dadosAnaliseProdutos, setDadosAnaliseProdutos] = useState([]);
@@ -195,13 +195,14 @@ export default function Dashboard() {
     };
   }, [produtos]);
 
-  const dadosProdutosMaisVendidos = useMemo(() => {
+  const dadosProdutosMaisEstoque = useMemo(() => {
     return [...produtos]
-      .sort((a, b) => (b.vendasTotais || 0) - (a.vendasTotais || 0))
+      .sort((a, b) => (b.quantidadeProduto || 0) - (a.quantidadeProduto || 0))
       .slice(0, 5)
       .map(produto => ({
         nome: produto.nome,
-        vendasTotais: produto.vendasTotais || 0
+        estoque: produto.quantidadeProduto || 0,
+        valorEstoque: (produto.quantidadeProduto || 0) * produto.precoProduto
       }));
   }, [produtos]);
 
@@ -210,15 +211,15 @@ export default function Dashboard() {
     
     produtos.forEach(produto => {
       const categoria = produto.categoriaProduto;
-      const vendas = produto.vendasTotais || 0;
-      const receita = vendas * produto.precoProduto;
+      const estoque = produto.quantidadeProduto || 0;
+      const valorEstoque = estoque * produto.precoProduto;
       
       if (!categorias[categoria]) {
-        categorias[categoria] = { nome: categoria, vendas: 0, receita: 0, quantidade: 0 };
+        categorias[categoria] = { nome: categoria, estoque: 0, valorEstoque: 0, quantidade: 0 };
       }
       
-      categorias[categoria].vendas += vendas;
-      categorias[categoria].receita += receita;
+      categorias[categoria].estoque += estoque;
+      categorias[categoria].valorEstoque += valorEstoque;
       categorias[categoria].quantidade += 1;
     });
     
@@ -298,29 +299,34 @@ export default function Dashboard() {
           ? (produto.precoProduto - produto.custoProducao) / produto.precoProduto 
           : 0.3; // Valor padrão caso não haja dados
         
+        // Calcular valor estimado de rotatividade (dias) - simulado entre 1 e 30 dias
+        const rotatividade = Math.floor(Math.random() * 30) + 1;
+        
         return {
           nome: produto.nome,
           categoria: produto.categoriaProduto,
           preco: produto.precoProduto,
           custo: produto.custoProducao || produto.precoProduto * 0.7, // Estimativa caso não haja dados
           estoque: produto.quantidadeProduto,
-          vendas: produto.vendasTotais || 0,
-          receita: (produto.vendasTotais || 0) * produto.precoProduto,
+          valorEstoque: produto.quantidadeProduto * produto.precoProduto,
+          rotatividade: rotatividade, // Dias estimados para o produto girar no estoque
           avaliacao: produto.ratingProduto,
           dataProducao: produto.dataProducao,
           dataExpiracao: produto.dataExpiracao,
           margem: margem,
-          lucroTotal: margem * (produto.vendasTotais || 0) * produto.precoProduto
+          valorPotencial: margem * produto.quantidadeProduto * produto.precoProduto
         };
       });
       
       // Ordenar com base no insight
-      if (insightAtivo === 'vendas') {
-        dadosProcessados = dadosProcessados.sort((a, b) => b.vendas - a.vendas);
+      if (insightAtivo === 'inventario') {
+        dadosProcessados = dadosProcessados.sort((a, b) => b.valorEstoque - a.valorEstoque);
       } else if (insightAtivo === 'preco-estoque') {
         dadosProcessados = dadosProcessados.sort((a, b) => b.estoque - a.estoque);
       } else if (insightAtivo === 'rentabilidade') {
         dadosProcessados = dadosProcessados.sort((a, b) => b.margem - a.margem);
+      } else if (insightAtivo === 'rotatividade') {
+        dadosProcessados = dadosProcessados.sort((a, b) => a.rotatividade - b.rotatividade);
       }
       
       // Limitar a 10 itens para melhor visualização
@@ -341,14 +347,14 @@ export default function Dashboard() {
     // Garantir que temos dados para todos os campos necessários
     const dadosProcessados = dadosAnaliseProdutos.slice(0, 8).map(item => ({
       nome: item.nome.length > 20 ? `${item.nome.substring(0, 20)}...` : item.nome,
-      vendas: item.vendas || 0,
-      receita: parseFloat(((item.preco || 0) * (item.vendas || 0)).toFixed(2)),
-      preco: parseFloat((item.preco || 0).toFixed(2)),
       estoque: item.estoque || 0,
+      valorEstoque: parseFloat(((item.preco || 0) * (item.estoque || 0)).toFixed(2)),
+      preco: parseFloat((item.preco || 0).toFixed(2)),
+      rotatividade: item.rotatividade || 30,
       margem: parseFloat(((item.margem || 0) * 100).toFixed(2)),
-      lucroTotal: parseFloat(((item.preco || 0) * (item.vendas || 0) * (item.margem || 0)).toFixed(2)),
+      valorPotencial: parseFloat(((item.preco || 0) * (item.estoque || 0) * (item.margem || 0)).toFixed(2)),
       avaliacao: parseFloat((item.avaliacao || 0).toFixed(1)),
-      valor: item.vendas || 0 // Campo adicional para compatibilidade
+      valor: item.estoque || 0 // Campo adicional para compatibilidade
     }));
     
     console.log('Dados processados para gráfico:', dadosProcessados.length > 0 ? 'OK' : 'Vazio');
@@ -726,22 +732,27 @@ export default function Dashboard() {
   };
 
   // Cálculos de KPIs
-  const totalVendas = produtos.reduce((sum, produto) => sum + produto.vendasTotais, 0);
-  const totalReceita = produtos.reduce((sum, produto) => sum + (produto.vendasTotais * produto.precoProduto), 0).toFixed(2);
+  const totalProdutos = produtos.length;
+  const totalEstoque = produtos.reduce((sum, produto) => sum + (produto.quantidadeProduto || 0), 0);
   const mediaAvaliacao = produtos.length > 0 
     ? (produtos.reduce((sum, produto) => sum + produto.ratingProduto, 0) / produtos.length).toFixed(1) 
     : 0;
-  const totalEstoque = produtos.reduce((sum, produto) => sum + produto.quantidadeProduto, 0);
+  const valorTotalEstoque = produtos.reduce((sum, produto) => sum + ((produto.quantidadeProduto || 0) * produto.precoProduto), 0).toFixed(2);
 
-  // Dados para o gráfico de receita por categoria
-  const dadosReceitaCategoria = produtos.length > 0 
+  // Dados para o gráfico de valor de estoque por categoria
+  const dadosEstoquePorCategoria = produtos.length > 0 
     ? produtos.reduce((acc, produto) => {
         const idx = acc.findIndex(item => item.nome === produto.categoriaProduto);
-        const receita = produto.precoProduto * produto.vendasTotais;
+        const valorEstoque = produto.precoProduto * (produto.quantidadeProduto || 0);
         if (idx >= 0) {
-          acc[idx].valor += receita;
+          acc[idx].valor += valorEstoque;
+          acc[idx].quantidade += produto.quantidadeProduto || 0;
         } else {
-          acc.push({ nome: produto.categoriaProduto, valor: receita });
+          acc.push({ 
+            nome: produto.categoriaProduto, 
+            valor: valorEstoque,
+            quantidade: produto.quantidadeProduto || 0 
+          });
         }
         return acc;
       }, []).map(item => ({
@@ -778,57 +789,75 @@ export default function Dashboard() {
     return Array.from(tamanhos);
   }, [produtos]);
 
-  // Nova função para análise de tags - Otimizada para calcular apenas quando necessário
+
+  // Análise de tags de produtos - centralizada com useMemo
   const analiseTags = useMemo(() => {
-    // Se os cálculos já foram realizados e a análise não está sendo mostrada, retorne um array vazio
-    if (calcTagsRealizado && !mostrarAnaliseEspacial) return [];
-    
-    // Se a análise está sendo ativada, marque que o carregamento começou
-    if (mostrarAnaliseEspacial && !calcTagsRealizado) {
-      setLoadingTags(true);
+    // Se os cálculos já foram realizados e a análise não está sendo mostrada, retorne array vazio
+    if (calcTagsRealizado && !mostrarAnaliseEspacial) {
+      return [];
     }
     
     if (!produtos.length) return [];
     
-    const tagMap = new Map();
-    let totalVendas = 0;
+    // Ativar loading enquanto calcula
+    if (mostrarAnaliseEspacial && !calcTagsRealizado) {
+      setLoadingTags(true);
+    }
+    
+    const tagsMap = new Map();
+    const totalEstoque = produtos.reduce((acc, prod) => acc + (prod.quantidadeProduto || 0), 0);
     
     produtos.forEach(produto => {
-      if (produto.tagsProdutos) {
-        const tags = produto.tagsProdutos.split(',');
-        const vendas = produto.vendasTotais || 0;
-        totalVendas += vendas;
-        
-        tags.forEach(tag => {
-          const tagTrim = tag.trim();
-          if (!tagMap.has(tagTrim)) {
-            tagMap.set(tagTrim, { 
-              tag: tagTrim, 
-              vendas: 0, 
-              receita: 0, 
-              quantidade: 0,
-              ratingMedio: 0,
-              totalRating: 0 
-            });
-          }
-          
-          const tagData = tagMap.get(tagTrim);
-          tagData.vendas += vendas;
-          tagData.receita += vendas * produto.precoProduto;
-          tagData.quantidade += 1;
-          tagData.totalRating += produto.ratingProduto;
-          tagData.ratingMedio = tagData.totalRating / tagData.quantidade;
-        });
+      // Obter todas as tags do produto (pode ser uma string ou array)
+      let tags = [];
+      
+      if (produto.tags) {
+        if (Array.isArray(produto.tags)) {
+          tags = produto.tags;
+        } else if (typeof produto.tags === 'string') {
+          // Se for string, dividir por vírgulas ou espaços
+          tags = produto.tags.split(/[,\s]+/).filter(Boolean);
+        }
       }
+      
+      // Se não houver tags explícitas, usar a categoria como tag
+      if (!tags.length && produto.categoriaProduto) {
+        tags = [produto.categoriaProduto];
+      }
+      
+      // Processar cada tag
+      tags.forEach(tag => {
+        tag = tag.trim();
+        if (!tag) return;
+        
+        if (!tagsMap.has(tag)) {
+          tagsMap.set(tag, { 
+            tag, 
+            estoque: 0, 
+            quantidade: 0,
+            ratingMedio: 0,
+            totalRating: 0,
+            valorEstoque: 0
+          });
+        }
+        
+        const tagData = tagsMap.get(tag);
+        tagData.estoque += produto.quantidadeProduto || 0;
+        tagData.quantidade += 1;
+        tagData.totalRating += produto.ratingProduto || 0;
+        tagData.ratingMedio = tagData.totalRating / tagData.quantidade;
+        tagData.valorEstoque += (produto.quantidadeProduto || 0) * (produto.precoProduto || 0);
+      });
     });
     
-    // Converter o Map para array e calcular a taxa de conversão
-    const resultado = Array.from(tagMap.values())
-      .map(item => ({
-        ...item,
-        taxaConversao: (item.vendas / (totalVendas || 1) * 100).toFixed(1)
+    // Calcular proporção do estoque
+    const resultado = Array.from(tagsMap.values())
+      .filter(tag => tag.estoque > 0) // Filtrar tags sem estoque
+      .map(tag => ({
+        ...tag,
+        proporcaoEstoque: ((tag.estoque / totalEstoque) * 100).toFixed(1)
       }))
-      .sort((a, b) => b.vendas - a.vendas);
+      .sort((a, b) => b.estoque - a.estoque);
     
     // Marcar que os cálculos foram realizados e desativar o loading
     if (mostrarAnaliseEspacial) {
@@ -838,92 +867,60 @@ export default function Dashboard() {
     
     return resultado;
   }, [produtos, mostrarAnaliseEspacial, calcTagsRealizado]);
-
-  // Nova função para análise de dimensões - Otimizada
-  const analiseDimensoes = useMemo(() => {
-    // Se os cálculos já foram realizados e a análise não está sendo mostrada, retorne objeto vazio
-    if (calcDimensoesRealizado && !mostrarDimensoes) {
-      return {
-        medidasMedias: { altura: 0, largura: 0, comprimento: 0 },
-        produtosMaiores: [],
-        produtosMenores: [],
-        volumeTotal: 0,
-        volumeMedio: 0
-      };
+  
+  const analisePorCor = useMemo(() => {
+    // Se os cálculos já foram realizados e a análise não está sendo mostrada, retorne array vazio
+    if (calcCoresTamanhosRealizado && !mostrarVariacoesCores) {
+      return [];
     }
     
-    // Se a análise está sendo ativada, marque que o carregamento começou
-    if (mostrarDimensoes && !calcDimensoesRealizado) {
-      setLoadingDimensoes(true);
-    }
+    if (!produtos.length) return [];
     
-    if (!produtos.length) {
-      return {
-        medidasMedias: { altura: 0, largura: 0, comprimento: 0 },
-        produtosMaiores: [],
-        produtosMenores: [],
-        volumeTotal: 0,
-        volumeMedio: 0
-      };
-    }
+    const coresMap = new Map();
     
-    // Calcular volume de cada produto e estatísticas
-    const produtosComVolume = produtos
-      .filter(produto => produto.Altura && produto.Largura && produto.Comprimento)
-      .map(produto => {
-        const volume = produto.Altura * produto.Largura * produto.Comprimento;
-        return { ...produto, volume };
-      });
+    produtos.forEach(produto => {
+      const cor = produto.corProduto || 'N/A';
+      const estoque = produto.quantidadeProduto || 0;
+      
+      if (!coresMap.has(cor)) {
+        coresMap.set(cor, { 
+          cor, 
+          estoque: 0, 
+          quantidade: 0,
+          ratingMedio: 0,
+          totalRating: 0,
+          valorEstoque: 0
+        });
+      }
+      
+      const corData = coresMap.get(cor);
+      corData.estoque += estoque;
+      corData.quantidade += 1;
+      corData.totalRating += produto.ratingProduto;
+      corData.ratingMedio = corData.totalRating / corData.quantidade;
+      corData.valorEstoque += estoque * produto.precoProduto;
+    });
     
-    if (!produtosComVolume.length) {
-      return {
-        medidasMedias: { altura: 0, largura: 0, comprimento: 0 },
-        produtosMaiores: [],
-        produtosMenores: [],
-        volumeTotal: 0,
-        volumeMedio: 0
-      };
-    }
-    
-    // Calcular médias
-    const somaAltura = produtosComVolume.reduce((acc, prod) => acc + prod.Altura, 0);
-    const somaLargura = produtosComVolume.reduce((acc, prod) => acc + prod.Largura, 0);
-    const somaComprimento = produtosComVolume.reduce((acc, prod) => acc + prod.Comprimento, 0);
-    const somaVolume = produtosComVolume.reduce((acc, prod) => acc + prod.volume, 0);
-    
-    // Ordenar por volume
-    const ordenadosPorVolume = [...produtosComVolume].sort((a, b) => b.volume - a.volume);
-    
-    const resultado = {
-      medidasMedias: {
-        altura: (somaAltura / produtosComVolume.length).toFixed(1),
-        largura: (somaLargura / produtosComVolume.length).toFixed(1),
-        comprimento: (somaComprimento / produtosComVolume.length).toFixed(1)
-      },
-      produtosMaiores: ordenadosPorVolume.slice(0, 5),
-      produtosMenores: ordenadosPorVolume.slice(-5).reverse(),
-      volumeTotal: somaVolume.toFixed(2),
-      volumeMedio: (somaVolume / produtosComVolume.length).toFixed(2),
-      dadosGrafico: produtosComVolume.slice(0, 50).map(p => ({
-        nome: p.nome,
-        volume: p.volume,
-        vendas: p.vendasTotais || 0,
-        cor: p.cor || 'N/A',
-        categoria: p.categoriaProduto
-      }))
-    };
+    const resultado = Array.from(coresMap.values())
+      .sort((a, b) => b.estoque - a.estoque);
     
     // Marcar que os cálculos foram realizados e desativar o loading
-    if (mostrarDimensoes) {
-      setCalcDimensoesRealizado(true);
-      setLoadingDimensoes(false);
+    if (mostrarVariacoesCores) {
+      setCalcCoresTamanhosRealizado(true);
+      setLoadingCoresTamanhos(false);
     }
     
     return resultado;
-  }, [produtos, mostrarDimensoes, calcDimensoesRealizado]);
+  }, [produtos, mostrarVariacoesCores, calcCoresTamanhosRealizado]);
 
-  // Nova função para análise de correlação entre dimensões e vendas - Otimizada
-  const correlacaoDimensoesVendas = useMemo(() => {
+  // Calcular a cor com a melhor avaliação
+  const corMelhorAvaliada = useMemo(() => {
+    if (!analisePorCor || analisePorCor.length === 0) return null;
+    return [...analisePorCor].sort((a, b) => b.ratingMedio - a.ratingMedio)[0];
+  }, [produtos, mostrarVariacoesCores, calcCoresTamanhosRealizado]);
+
+  // Nova função para análise de correlação entre dimensões e estoque - Otimizada
+  const correlacaoDimensoesEstoque = useMemo(() => {
     // Se os cálculos de dimensões já foram realizados mas a análise não está sendo mostrada,
     // ou se não temos produtos, retornar objeto vazio
     if ((calcDimensoesRealizado && !mostrarDimensoes) || !produtos.length) {
@@ -931,7 +928,7 @@ export default function Dashboard() {
     }
     
     const produtosValidos = produtos.filter(
-      p => p.Altura && p.Largura && p.Comprimento && p.vendasTotais
+      p => p.Altura && p.Largura && p.Comprimento && p.quantidadeProduto
     );
     
     if (!produtosValidos.length) return { dadosScatter: [], correlacao: 0 };
@@ -942,13 +939,13 @@ export default function Dashboard() {
       return {
         nome: p.nome,
         volume,
-        vendas: p.vendasTotais || 0
+        estoque: p.quantidadeProduto || 0
       };
     });
     
-    // Calcular correlação entre volume e vendas (coeficiente de Pearson)
+    // Calcular correlação entre volume e estoque (coeficiente de Pearson)
     const mediaVolume = dadosScatter.reduce((acc, item) => acc + item.volume, 0) / dadosScatter.length;
-    const mediaVendas = dadosScatter.reduce((acc, item) => acc + item.vendas, 0) / dadosScatter.length;
+    const mediaEstoque = dadosScatter.reduce((acc, item) => acc + item.estoque, 0) / dadosScatter.length;
     
     let numerador = 0;
     let denominador1 = 0;
@@ -956,11 +953,11 @@ export default function Dashboard() {
     
     dadosScatter.forEach(item => {
       const diffVolume = item.volume - mediaVolume;
-      const diffVendas = item.vendas - mediaVendas;
+      const diffEstoque = item.estoque - mediaEstoque;
       
-      numerador += diffVolume * diffVendas;
+      numerador += diffVolume * diffEstoque;
       denominador1 += diffVolume * diffVolume;
-      denominador2 += diffVendas * diffVendas;
+      denominador2 += diffEstoque * diffEstoque;
     });
     
     const correlacao = denominador1 && denominador2 
@@ -970,13 +967,8 @@ export default function Dashboard() {
     return { dadosScatter, correlacao };
   }, [produtos, mostrarDimensoes, calcDimensoesRealizado]);
 
-  // Nova função para análise de popularidade por cor - Otimizada
-  const analisePopularidadeCores = useMemo(() => {
-    // Se os cálculos já foram realizados e a análise não está sendo mostrada, retorne array vazio
-    if (calcCoresTamanhosRealizado && !mostrarVariacoesCores) {
-      return [];
-    }
-    
+  // Nova função para análise de estoque por cor - Otimizada
+  const analiseEstoquePorCor = useMemo(() => {
     // Se a análise está sendo ativada, marque que o carregamento começou
     if (mostrarVariacoesCores && !calcCoresTamanhosRealizado) {
       setLoadingCoresTamanhos(true);
@@ -988,29 +980,29 @@ export default function Dashboard() {
     
     produtos.forEach(produto => {
       const cor = produto.cor || 'N/A';
-      const vendas = produto.vendasTotais || 0;
+      const estoque = produto.quantidadeProduto || 0;
       
       if (!coresMap.has(cor)) {
         coresMap.set(cor, { 
           cor, 
-          vendas: 0, 
+          estoque: 0, 
           quantidade: 0, 
           ratingMedio: 0,
           totalRating: 0,
-          receita: 0 
+          valorEstoque: 0 
         });
       }
       
       const corData = coresMap.get(cor);
-      corData.vendas += vendas;
+      corData.estoque += estoque;
       corData.quantidade += 1;
       corData.totalRating += produto.ratingProduto;
       corData.ratingMedio = corData.totalRating / corData.quantidade;
-      corData.receita += vendas * produto.precoProduto;
+      corData.valorEstoque += estoque * produto.precoProduto;
     });
     
     const resultado = Array.from(coresMap.values())
-      .sort((a, b) => b.vendas - a.vendas);
+      .sort((a, b) => b.estoque - a.estoque);
     
     // Marcar que os cálculos foram realizados e desativar o loading
     if (mostrarVariacoesCores) {
@@ -1021,8 +1013,8 @@ export default function Dashboard() {
     return resultado;
   }, [produtos, mostrarVariacoesCores, calcCoresTamanhosRealizado]);
 
-  // Nova função para análise de popularidade por tamanho - Otimizada
-  const analisePopularidadeTamanhos = useMemo(() => {
+  // Nova função para análise de estoque por tamanho - Otimizada
+  const analiseEstoquePorTamanho = useMemo(() => {
     // Se os cálculos já foram realizados e a análise não está sendo mostrada, retorne array vazio
     if (calcCoresTamanhosRealizado && !mostrarVariacoesCores) {
       return [];
@@ -1034,29 +1026,29 @@ export default function Dashboard() {
     
     produtos.forEach(produto => {
       const tamanho = produto.tamanho || 'N/A';
-      const vendas = produto.vendasTotais || 0;
+      const estoque = produto.quantidadeProduto || 0;
       
       if (!tamanhosMap.has(tamanho)) {
         tamanhosMap.set(tamanho, { 
           tamanho, 
-          vendas: 0, 
+          estoque: 0, 
           quantidade: 0,
           ratingMedio: 0,
           totalRating: 0,
-          receita: 0
+          valorEstoque: 0
         });
       }
       
       const tamanhoData = tamanhosMap.get(tamanho);
-      tamanhoData.vendas += vendas;
+      tamanhoData.estoque += estoque;
       tamanhoData.quantidade += 1;
       tamanhoData.totalRating += produto.ratingProduto;
       tamanhoData.ratingMedio = tamanhoData.totalRating / tamanhoData.quantidade;
-      tamanhoData.receita += vendas * produto.precoProduto;
+      tamanhoData.valorEstoque += estoque * produto.precoProduto;
     });
     
     return Array.from(tamanhosMap.values())
-      .sort((a, b) => b.vendas - a.vendas);
+      .sort((a, b) => b.estoque - a.estoque);
   }, [produtos, mostrarVariacoesCores, calcCoresTamanhosRealizado]);
 
   // Adicionar efeitos para resetar os cálculos quando os produtos mudam
@@ -1116,18 +1108,18 @@ export default function Dashboard() {
         
         <div className="bg-gray-800 rounded-lg shadow-md p-4">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <FiBox className="mr-2" /> Correlação entre Volume e Vendas
+            <FiBox className="mr-2" /> Correlação entre Volume e Estoque
           </h3>
-          {correlacaoDimensoesVendas.correlacao !== 0 ? (
+          {correlacaoDimensoesEstoque.correlacao !== 0 ? (
             <div>
               <div className="mb-4 bg-gray-700 p-3 rounded-md text-center">
                 <p className="text-sm text-gray-400">Coeficiente de Correlação</p>
-                <p className="text-xl font-bold text-white">{correlacaoDimensoesVendas.correlacao}</p>
+                <p className="text-xl font-bold text-white">{correlacaoDimensoesEstoque.correlacao}</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {correlacaoDimensoesVendas.correlacao > 0.5 ? 'Forte correlação positiva' : 
-                   correlacaoDimensoesVendas.correlacao < -0.5 ? 'Forte correlação negativa' : 
-                   correlacaoDimensoesVendas.correlacao > 0.3 ? 'Correlação positiva moderada' :
-                   correlacaoDimensoesVendas.correlacao < -0.3 ? 'Correlação negativa moderada' :
+                  {correlacaoDimensoesEstoque.correlacao > 0.5 ? 'Forte correlação positiva' : 
+                   correlacaoDimensoesEstoque.correlacao < -0.5 ? 'Forte correlação negativa' : 
+                   correlacaoDimensoesEstoque.correlacao > 0.3 ? 'Correlação positiva moderada' :
+                   correlacaoDimensoesEstoque.correlacao < -0.3 ? 'Correlação negativa moderada' :
                    'Correlação fraca ou inexistente'}
                 </p>
               </div>
@@ -1146,16 +1138,16 @@ export default function Dashboard() {
                       label={{ value: 'Volume (cm³)', position: 'insideBottomRight', offset: -5, fill: textColor }}
                     />
                     <YAxis 
-                      dataKey="vendas" 
-                      name="Vendas" 
+                      dataKey="estoque" 
+                      name="Estoque" 
                       stroke={textColor}
-                      label={{ value: 'Vendas', angle: -90, position: 'insideLeft', fill: textColor }}
+                      label={{ value: 'Estoque', angle: -90, position: 'insideLeft', fill: textColor }}
                     />
                     <Tooltip 
-                      formatter={(value, name) => [value, name === 'volume' ? 'Volume (cm³)' : 'Vendas']}
+                      formatter={(value, name) => [value, name === 'volume' ? 'Volume (cm³)' : 'Estoque']}
                       labelFormatter={(value) => `Volume: ${value.toFixed(2)} cm³`}
                     />
-                    <Scatter name="Produtos" data={correlacaoDimensoesVendas.dadosScatter} fill={accentColor} />
+                    <Scatter name="Produtos" data={correlacaoDimensoesEstoque.dadosScatter} fill={accentColor} />
                   </ScatterChart>
                 </ResponsiveContainer>
               </div>
@@ -1170,278 +1162,386 @@ export default function Dashboard() {
     );
   };
 
-  // Adicionar seção de renderização para análise de tags - Otimizada
+  // Calcular a tag com melhor avaliação uma única vez - movido para o nível do componente
+  const tagComMelhorAvaliacao = useMemo(() => {
+    if (!analiseTags || analiseTags.length === 0) return null;
+    return [...analiseTags].sort((a, b) => b.ratingMedio - a.ratingMedio)[0];
+  }, [analiseTags]);
+
+  // Renderizar análise de tags
   const renderizarAnaliseTags = () => {
-    // Se estiver carregando, mostrar indicador de carregamento
     if (loadingTags) {
       return (
-        <div className="p-8 bg-gray-800 rounded-lg shadow-md text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500 mx-auto mb-4"></div>
-          <p className="text-gray-300">Analisando tags dos produtos...</p>
+        <div className="p-6 bg-gray-800 rounded-lg shadow-md border border-gray-700 flex flex-col items-center justify-center h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
+          <p className="text-gray-300">Calculando análise de tags do estoque...</p>
         </div>
       );
     }
-    
-    // Se não há dados suficientes, mostrar mensagem
-    if (!analiseTags.length) {
+
+    if (!analiseTags || analiseTags.length === 0) {
       return (
-        <div className="p-4 bg-gray-800 rounded-lg shadow-md text-center">
-          <p className="text-gray-300">Não há dados de tags suficientes para análise</p>
+        <div className="p-6 bg-gray-800 rounded-lg shadow-md border border-gray-700 flex items-center justify-center h-[400px]">
+          <p className="text-gray-300">Nenhuma tag encontrada nos produtos.</p>
         </div>
       );
     }
+
+    // Limitar para as top 10 tags para uma visualização clara
+    const topTags = analiseTags.slice(0, 10);
+    const dadosGrafico = topTags.map(item => ({
+      tag: item.tag,
+      estoque: item.estoque,
+      valor: parseFloat(item.valorEstoque.toFixed(2))
+    }));
+
+    // Detalhes para a tag selecionada
+    const tagDetalhe = tagSelecionada === 'todas' 
+      ? null 
+      : analiseTags.find(t => t.tag === tagSelecionada);
     
-    // Limitar a 10 tags para melhor performance
-    const tagsTop = analiseTags.slice(0, 10);
+    // Encontrar a tag com melhor avaliação sem usar hooks
+    let melhorTag = null;
+    if (analiseTags.length > 0) {
+      melhorTag = analiseTags.reduce((prev, current) => 
+        (prev.ratingMedio > current.ratingMedio) ? prev : current, { ratingMedio: 0 });
+    }
     
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-        <div className="bg-gray-800 rounded-lg shadow-md p-4">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <FiTag className="mr-2" /> Top 10 Tags mais Populares
-          </h3>
-          <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={tagsTop}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-                background={chartBackground}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
-                <XAxis type="number" stroke={textColor} />
-                <YAxis type="category" dataKey="tag" stroke={textColor} width={80} />
-                <Tooltip
-                  formatter={(value) => [`${value}`, 'Vendas']}
-                  contentStyle={{ backgroundColor: cardBackground, border: 'none' }}
-                />
-                <Legend />
-                <Bar dataKey="vendas" fill={accentColor} name="Vendas" />
-              </BarChart>
-            </ResponsiveContainer>
+      <div className="bg-gray-800 rounded-lg shadow-md border border-gray-700 p-6 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <h3 className="text-xl font-medium mb-4 text-indigo-300">Top Tags por Volume de Estoque</h3>
+            <div className="h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={dadosGrafico}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
+                  <XAxis 
+                    dataKey="tag" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={80} 
+                    tick={{ fill: mutedTextColor }}
+                    interval={0}
+                  />
+                  <YAxis yAxisId="left" orientation="left" tick={{ fill: mutedTextColor }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fill: mutedTextColor }} />
+                  <Tooltip
+                    formatter={(value, name) => {
+                      if (name === 'estoque') return [value, 'Unidades em Estoque'];
+                      if (name === 'valor') return [`R$ ${parseFloat(value).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 'Valor do Estoque'];
+                      return [value, name];
+                    }}
+                    contentStyle={{ backgroundColor: '#171e2e', borderColor: '#2d3748', color: '#f0f4f8' }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: 20 }} />
+                  <Bar 
+                    yAxisId="left" 
+                    dataKey="estoque" 
+                    fill="#6c63ff" 
+                    name="Estoque" 
+                    onClick={(data) => setTagSelecionada(data.tag)}
+                    cursor="pointer"
+                  />
+                  <Bar 
+                    yAxisId="right" 
+                    dataKey="valor" 
+                    fill="#4cd97b" 
+                    name="Valor do Estoque" 
+                    onClick={(data) => setTagSelecionada(data.tag)}
+                    cursor="pointer"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="text-xs text-gray-400 text-center mt-2">
+                Clique em uma barra para ver detalhes da tag
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <div className="bg-gray-700 rounded-lg p-4 h-full">
+              <h3 className="text-lg font-medium mb-4 flex items-center justify-between">
+                <span>Detalhes da Tag</span>
+                <select
+                  value={tagSelecionada}
+                  onChange={(e) => setTagSelecionada(e.target.value)}
+                  className="text-sm bg-gray-800 border-none rounded px-2 py-1 ml-2 focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="todas">Selecionar tag...</option>
+                  {analiseTags.map(tag => (
+                    <option key={tag.tag} value={tag.tag}>{tag.tag}</option>
+                  ))}
+                </select>
+              </h3>
+
+              {tagDetalhe ? (
+                <div className="space-y-6">
+                  <div className="text-center p-4 bg-gray-800 rounded-lg">
+                    <h4 className="text-xl font-bold text-indigo-300">{tagDetalhe.tag}</h4>
+                    <p className="text-gray-400 text-sm">Tag de Produto</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-800 p-3 rounded-lg text-center">
+                      <p className="text-sm text-gray-400">Estoque Total</p>
+                      <p className="text-xl font-bold">{tagDetalhe.estoque}</p>
+                    </div>
+                    <div className="bg-gray-800 p-3 rounded-lg text-center">
+                      <p className="text-sm text-gray-400">Avaliação Média</p>
+                      <p className="text-xl font-bold">{tagDetalhe.ratingMedio.toFixed(1)}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-800 p-3 rounded-lg">
+                    <p className="text-sm text-gray-400 mb-1">Valor do Estoque</p>
+                    <p className="text-xl font-bold">
+                      R$ {parseFloat(tagDetalhe.valorEstoque).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-800 p-3 rounded-lg">
+                    <p className="text-sm text-gray-400 mb-1">Proporção do Estoque</p>
+                    <div className="flex items-center">
+                      <div className="w-full bg-gray-700 rounded-full h-4 mr-2">
+                        <div 
+                          className="bg-indigo-600 h-4 rounded-full" 
+                          style={{ width: `${tagDetalhe.proporcaoEstoque}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-white">{tagDetalhe.proporcaoEstoque}%</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-800 p-3 rounded-lg">
+                    <p className="text-sm text-gray-400 mb-1">Quantidade de Produtos</p>
+                    <p className="text-xl font-bold">{tagDetalhe.quantidade}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
+                  <FiTag className="text-4xl mb-3 text-gray-500" />
+                  <p>Selecione uma tag para ver detalhes</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        
-        <div className="bg-gray-800 rounded-lg shadow-md p-4">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <BsTags className="mr-2" /> Desempenho das Tags
-          </h3>
-          <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto pr-2">
-            {tagsTop.map((tag, index) => (
-              <div key={index} className="bg-gray-700 p-3 rounded-md">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-white">{tag.tag}</span>
-                  <span className="text-sm text-gray-300">{tag.quantidade} produtos</span>
+
+        <div className="mt-6 bg-gray-700 p-4 rounded-lg">
+          <h3 className="text-lg font-medium mb-2">Insights de Inventário por Tags</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="bg-gray-800 p-3 rounded-lg">
+              <div className="flex items-start">
+                <div className="bg-indigo-900 p-2 rounded mr-3">
+                  <FiBarChart2 className="text-indigo-300" />
                 </div>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-sm">
-                  <div>
-                    <p className="text-gray-400">Vendas</p>
-                    <p className="text-white font-semibold">{tag.vendas}</p>
+                <div>
+                  <h4 className="font-medium text-indigo-300">Distribuição de Estoque</h4>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {analiseTags.length > 0 ? (
+                      `${(analiseTags[0].tag)} possui o maior volume de estoque (${analiseTags[0].estoque} unidades, ${analiseTags[0].proporcaoEstoque}% do total).`
+                    ) : 'Sem dados suficientes para análise.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-800 p-3 rounded-lg">
+              <div className="flex items-start">
+                <div className="bg-green-900 p-2 rounded mr-3">
+                  <FiDollarSign className="text-green-300" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-green-300">Valor de Inventário</h4>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {analiseTags.length > 0 ? (
+                      `Produtos com a tag "${analiseTags[0].tag}" representam R$ ${parseFloat(analiseTags[0].valorEstoque).toLocaleString('pt-BR', {minimumFractionDigits: 2})} em estoque.`
+                    ) : 'Sem dados suficientes para análise.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-800 p-3 rounded-lg">
+              <div className="flex items-start">
+                <div className="bg-blue-900 p-2 rounded mr-3">
+                  <FiStar className="text-blue-300" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-300">Avaliação e Qualidade</h4>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {melhorTag ? (
+                      `A tag com melhor avaliação é "${melhorTag.tag}" com média de ${melhorTag.ratingMedio.toFixed(1)}/5.`
+                    ) : 'Sem dados suficientes para análise.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-800 p-3 rounded-lg">
+              <div className="flex items-start">
+                <div className="bg-purple-900 p-2 rounded mr-3">
+                  <FiShoppingBag className="text-purple-300" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-purple-300">Otimização de Estoque</h4>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {analiseTags.length > 0 ? (
+                      `Considere equilibrar o estoque entre as tags, já que ${analiseTags[0].tag} representa ${analiseTags[0].proporcaoEstoque}% do estoque total.`
+                    ) : 'Sem dados suficientes para análise.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Adicionando renderizarAnaliseCoresTamanhos - versão simplificada
+  function renderizarAnaliseCoresTamanhos() {
+    return (
+      <div className="p-6 bg-gray-800 rounded-lg shadow-md">
+        <h3 className="text-xl font-semibold text-white mb-4">Análise de Cores e Tamanhos</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Painel de Cores */}
+          <div className="bg-gray-700 p-4 rounded-lg">
+            <h4 className="text-lg font-medium text-indigo-300 mb-3">Distribuição por Cores</h4>
+            
+            {analisePorCor && analisePorCor.length > 0 ? (
+              <div>
+                <div className="h-60">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analisePorCor.slice(0, 6)}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
+                      <XAxis dataKey="cor" tick={{ fill: textColor }} />
+                      <YAxis tick={{ fill: textColor }} />
+                      <Tooltip 
+                        formatter={(value) => [value, 'Unidades']}
+                        contentStyle={{ backgroundColor: '#171e2e', borderColor: '#2d3748', color: '#f0f4f8' }} 
+                      />
+                      <Bar dataKey="estoque" fill="#6c63ff" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="bg-gray-800 p-3 rounded text-center">
+                    <p className="text-xs text-gray-400">Cor Predominante</p>
+                    <p className="text-lg font-medium text-white">{analisePorCor[0].cor}</p>
+                    <p className="text-sm text-indigo-300">{analisePorCor[0].estoque} unidades</p>
                   </div>
-                  <div>
-                    <p className="text-gray-400">Rating</p>
-                    <p className="text-white font-semibold">{tag.ratingMedio.toFixed(1)}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-400">Conversão</p>
-                    <p className="text-white font-semibold">{tag.taxaConversao}%</p>
+                  
+                  <div className="bg-gray-800 p-3 rounded text-center">
+                    <p className="text-xs text-gray-400">Valor Total</p>
+                    <p className="text-lg font-medium text-white">
+                      {formataMoeda(analisePorCor.reduce((sum, item) => sum + item.valorEstoque, 0))}
+                    </p>
                   </div>
                 </div>
               </div>
-            ))}
+            ) : (
+              <div className="flex items-center justify-center h-40 text-gray-400">
+                <p>Sem dados de cores disponíveis</p>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Adicionar seção de renderização para análise de cores e tamanhos - Otimizada
-  const renderizarAnaliseCoresTamanhos = () => {
-    // Se estiver carregando, mostrar indicador de carregamento
-    if (loadingCoresTamanhos) {
-      return (
-        <div className="p-8 bg-gray-800 rounded-lg shadow-md text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500 mx-auto mb-4"></div>
-          <p className="text-gray-300">Analisando cores e tamanhos...</p>
-        </div>
-      );
-    }
-    
-    const dadosCores = analisePopularidadeCores;
-    const dadosTamanhos = analisePopularidadeTamanhos;
-    
-    // Se não há dados suficientes, mostrar mensagem
-    if (!dadosCores.length || !dadosTamanhos.length) {
-      return (
-        <div className="p-4 bg-gray-800 rounded-lg shadow-md text-center">
-          <p className="text-gray-300">Não há dados de cores ou tamanhos suficientes para análise</p>
-        </div>
-      );
-    }
-    
-    // Preparar dados para gráficos - Limitar a 8 itens para melhor performance
-    const dadosGraficoCores = dadosCores.slice(0, 8).map((item, index) => ({
-      ...item,
-      fill: COLORS[index % COLORS.length]
-    }));
-    
-    const dadosGraficoTamanhos = dadosTamanhos.slice(0, 8);
-    
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-        <div className="bg-gray-800 rounded-lg shadow-md p-4">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <BsPalette className="mr-2" /> Análise de Vendas por Cor
-          </h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={dadosGraficoCores}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  dataKey="vendas"
-                  nameKey="cor"
-                  label={(entry) => entry.cor}
-                >
-                  {dadosGraficoCores.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value, name, props) => [value, 'Vendas']}
-                  contentStyle={{ backgroundColor: cardBackground, border: 'none' }}
-                  labelFormatter={(value) => `Cor: ${value}`}
-                />
-                <Legend layout="vertical" verticalAlign="middle" align="right" />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="bg-gray-700 p-3 rounded-md text-center">
-              <p className="text-sm text-gray-400">Cor mais popular</p>
-              <p className="text-xl font-bold text-white">{dadosCores[0]?.cor || 'N/A'}</p>
-            </div>
-            <div className="bg-gray-700 p-3 rounded-md text-center">
-              <p className="text-sm text-gray-400">Vendas</p>
-              <p className="text-xl font-bold text-white">{dadosCores[0]?.vendas || 0}</p>
-            </div>
+          
+          {/* Painel de Tamanhos */}
+          <div className="bg-gray-700 p-4 rounded-lg">
+            <h4 className="text-lg font-medium text-indigo-300 mb-3">Distribuição por Tamanhos</h4>
+            
+            {analiseEstoquePorTamanho && analiseEstoquePorTamanho.length > 0 ? (
+              <div>
+                <div className="h-60">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={analiseEstoquePorTamanho.slice(0, 6)}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="estoque"
+                        nameKey="tamanho"
+                        label={({ tamanho, percent }) => `${tamanho}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {analiseEstoquePorTamanho.slice(0, 6).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value) => [value, 'Unidades']}
+                        contentStyle={{ backgroundColor: '#171e2e', borderColor: '#2d3748', color: '#f0f4f8' }} 
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="bg-gray-800 p-3 rounded text-center">
+                    <p className="text-xs text-gray-400">Tamanho Predominante</p>
+                    <p className="text-lg font-medium text-white">{analiseEstoquePorTamanho[0].tamanho}</p>
+                    <p className="text-sm text-indigo-300">{analiseEstoquePorTamanho[0].estoque} unidades</p>
+                  </div>
+                  
+                  <div className="bg-gray-800 p-3 rounded text-center">
+                    <p className="text-xs text-gray-400">Valor Total</p>
+                    <p className="text-lg font-medium text-white">
+                      {formataMoeda(analiseEstoquePorTamanho.reduce((sum, item) => sum + item.valorEstoque, 0))}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-40 text-gray-400">
+                <p>Sem dados de tamanhos disponíveis</p>
+              </div>
+            )}
           </div>
         </div>
         
-        <div className="bg-gray-800 rounded-lg shadow-md p-4">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <BsRulers className="mr-2" /> Análise de Vendas por Tamanho
-          </h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={dadosGraficoTamanhos}
-                margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
-                background={chartBackground}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
-                <XAxis 
-                  dataKey="tamanho" 
-                  stroke={textColor}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  tickMargin={10}
-                />
-                <YAxis stroke={textColor} />
-                <Tooltip
-                  formatter={(value) => [`${value}`, 'Vendas']}
-                  contentStyle={{ backgroundColor: cardBackground, border: 'none' }}
-                />
-                <Legend />
-                <Bar dataKey="vendas" fill={accentColor} name="Vendas" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="bg-gray-700 p-3 rounded-md text-center">
-              <p className="text-sm text-gray-400">Tamanho mais popular</p>
-              <p className="text-xl font-bold text-white">{dadosTamanhos[0]?.tamanho || 'N/A'}</p>
+        {/* Insights gerais */}
+        <div className="mt-6 bg-gray-800 p-4 rounded-lg">
+          <h4 className="text-md font-medium text-white mb-3">Insights de Inventário</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-start">
+              <div className="bg-indigo-900 p-2 rounded-full mr-3">
+                <FiBarChart2 className="text-indigo-300" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-300">
+                  {analisePorCor.length > 0 ? 
+                    `A cor "${analisePorCor[0].cor}" representa ${Math.round((analisePorCor[0].estoque / metricas.totalEstoque) * 100)}% do estoque total.` : 
+                    "Sem dados suficientes para análise."}
+                </p>
+              </div>
             </div>
-            <div className="bg-gray-700 p-3 rounded-md text-center">
-              <p className="text-sm text-gray-400">Vendas</p>
-              <p className="text-xl font-bold text-white">{dadosTamanhos[0]?.vendas || 0}</p>
+            
+            <div className="flex items-start">
+              <div className="bg-green-900 p-2 rounded-full mr-3">
+                <FiDollarSign className="text-green-300" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-300">
+                  {analiseEstoquePorTamanho.length > 0 ? 
+                    `O tamanho "${analiseEstoquePorTamanho[0].tamanho}" representa ${formataMoeda(analiseEstoquePorTamanho[0].valorEstoque)} em estoque.` : 
+                    "Sem dados suficientes para análise."}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
     );
-  };
-
-  // Efeito para verificar continuamente a disponibilidade de dados
-  useEffect(() => {
-    // Se já temos produtos e não estamos em um estado de carregamento,
-    // configurar uma verificação periódica
-    if (produtos.length > 0 && !loading) {
-      const verificarDisponibilidade = async () => {
-        try {
-          console.log('Verificando disponibilidade dos dados...');
-          const response = await fetch('https://backendapimongo.tigasolutions.com.br/api/v1/todos');
-          
-          if (!response.ok) {
-            console.warn('API indisponível, retornando para a tela de carregamento');
-            setProdutos([]);
-            setLoading(true);
-            
-            // Após retornar para a tela de carregamento, tentar reconectar
-            setTimeout(() => {
-              fetchProdutos();
-            }, 5000);
-            return;
-          }
-          
-          const data = await response.json();
-          if (!data || data.length === 0) {
-            console.warn('Nenhum dado disponível, retornando para a tela de carregamento');
-            setProdutos([]);
-            setLoading(true);
-            
-            // Após retornar para a tela de carregamento, tentar reconectar
-            setTimeout(() => {
-              fetchProdutos();
-            }, 3000);
-            return;
-          }
-          
-          // Verificar se precisamos atualizar os dados
-          if (data.length !== produtos.length) {
-            console.log('Quantidade de produtos mudou, atualizando dados...');
-            fetchProdutos();
-            return;
-          }
-          
-          // Tudo está ok, não precisamos fazer nada
-          console.log('API disponível e dados atualizados');
-        } catch (err) {
-          console.error('Erro ao verificar disponibilidade:', err);
-          setProdutos([]);
-          setLoading(true);
-          
-          // Tentar reconectar automaticamente
-          setTimeout(() => {
-            fetchProdutos();
-          }, 5000);
-        }
-      };
-      
-      // Verificar a cada 60 segundos se a API ainda está disponível
-      const intervaloVerificacao = setInterval(verificarDisponibilidade, 60000);
-      
-      return () => clearInterval(intervaloVerificacao);
-    }
-  }, [produtos, loading]);
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-4">
-      <Header titulo="Dashboard de Produtos" subtitulo="Visão geral de desempenho e métricas-chave" />
+      <Header titulo="Dashboard de Produtos" subtitulo="Visão geral de métricas e análises de inventário" />
 
       {loading || produtos.length === 0 ? (
         <div className="flex flex-col justify-center items-center h-screen fixed inset-0 bg-gray-900 bg-opacity-95 z-50">
@@ -1487,19 +1587,19 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg transform hover:scale-105 transition-transform duration-300">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-200">Total de Vendas</h3>
-                <BsFillCartCheckFill className="text-indigo-300 text-2xl" />
+                <h3 className="text-lg font-medium text-gray-200">Total de Produtos</h3>
+                <FiPackage className="text-indigo-300 text-2xl" />
               </div>
-              <p className="text-3xl font-bold mt-2">{totalVendas}</p>
+              <p className="text-3xl font-bold mt-2">{totalProdutos}</p>
               <p className="text-green-300 text-sm mt-1">↑ 12% em relação ao último período</p>
             </div>
             
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg transform hover:scale-105 transition-transform duration-300">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-200">Receita Total</h3>
+                <h3 className="text-lg font-medium text-gray-200">Valor Total do Estoque</h3>
                 <BsCashCoin className="text-green-300 text-2xl" />
               </div>
-              <p className="text-3xl font-bold mt-2">R$ {parseFloat(totalReceita).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+              <p className="text-3xl font-bold mt-2">R$ {parseFloat(valorTotalEstoque).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
               <p className="text-green-300 text-sm mt-1">↑ 8% em relação ao último período</p>
             </div>
             
@@ -1524,13 +1624,13 @@ export default function Dashboard() {
 
           {/* Gráficos principais - primeira linha */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Produtos mais vendidos */}
+            {/* Produtos com maior estoque */}
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
-              <h3 className="text-xl font-medium mb-4 text-indigo-300">Produtos Mais Vendidos</h3>
+              <h3 className="text-xl font-medium mb-4 text-indigo-300">Produtos com Maior Estoque</h3>
               <div className="h-[350px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={dadosProdutosMaisVendidos}
+                    data={dadosProdutosMaisEstoque}
                     margin={{ top: 10, right: 30, left: 0, bottom: 60 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
@@ -1538,7 +1638,7 @@ export default function Dashboard() {
                     <YAxis tick={{ fill: mutedTextColor }} />
                     <Tooltip contentStyle={{ backgroundColor: '#171e2e', borderColor: '#2d3748', color: '#f0f4f8' }} />
                     <Legend wrapperStyle={{ paddingTop: 20 }} formatter={(value) => <span style={{ color: mutedTextColor }}>{value}</span>} />
-                    <Bar dataKey="vendasTotais" fill={accentColor} name="Quantidade vendida" />
+                    <Bar dataKey="estoque" fill={accentColor} name="Quantidade em estoque" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1546,7 +1646,7 @@ export default function Dashboard() {
             
             {/* Top categorias */}
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
-              <h3 className="text-xl font-medium mb-4 text-indigo-300">Top Categorias por Volume de Vendas</h3>
+              <h3 className="text-xl font-medium mb-4 text-indigo-300">Top Categorias por Volume de Estoque</h3>
               <div className="h-[350px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -1557,7 +1657,7 @@ export default function Dashboard() {
                       labelLine={false}
                       outerRadius={120}
                       fill="#8884d8"
-                      dataKey="vendas"
+                      dataKey="estoque"
                       nameKey="nome"
                       label={({ nome, percent }) => `${nome} ${(percent * 100).toFixed(0)}%`}
                     >
@@ -1572,16 +1672,16 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
+          
           {/* Gráficos principais - segunda linha */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Receita por categoria */}
+            {/* Valor de estoque por categoria */}
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
-              <h3 className="text-xl font-medium mb-4 text-indigo-300">Receita Total por Categoria</h3>
+              <h3 className="text-xl font-medium mb-4 text-indigo-300">Valor de Estoque por Categoria</h3>
               <div className="h-[350px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
-                    data={dadosReceitaCategoria}
+                    data={dadosEstoquePorCategoria}
                     margin={{ top: 10, right: 30, left: 0, bottom: 60 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
@@ -1589,15 +1689,15 @@ export default function Dashboard() {
                     <YAxis tick={{ fill: mutedTextColor }} />
                     <Tooltip contentStyle={{ backgroundColor: '#171e2e', borderColor: '#2d3748', color: '#f0f4f8' }} />
                     <Legend wrapperStyle={{ paddingTop: 20 }} formatter={(value) => <span style={{ color: mutedTextColor }}>{value}</span>} />
-                    <Area type="monotone" dataKey="valor" stroke={accentColor} fill={accentColor} fillOpacity={0.8} name="Receita (R$)" />
+                    <Area type="monotone" dataKey="valor" stroke={accentColor} fill={accentColor} fillOpacity={0.8} name="Valor do Estoque (R$)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
             
-            {/* Produtos com baixa popularidade */}
+            {/* Produtos com baixa avaliação */}
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
-              <h3 className="text-xl font-medium mb-4 text-indigo-300">Produtos com Baixa Popularidade</h3>
+              <h3 className="text-xl font-medium mb-4 text-indigo-300">Produtos com Baixa Avaliação</h3>
               <div className="h-[350px] flex items-center justify-center">
                 {produtosBaixaPopularidade.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -1617,7 +1717,7 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="text-gray-300 text-center">
-                    <p>Nenhum produto com baixa popularidade encontrado.</p>
+                    <p>Nenhum produto com baixa avaliação encontrado.</p>
                     <p className="text-sm mt-2">Todos os produtos têm avaliação acima de 4.5</p>
                   </div>
                 )}
@@ -1625,141 +1725,14 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Análise personalizada */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg mb-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-              <div>
-                <h3 className="text-xl font-medium text-indigo-300">Análise Personalizada</h3>
-                <p className="text-gray-300 text-sm">Escolha o tipo de gráfico e insight para explorar os dados</p>
-              </div>
-              <div className="flex mt-4 sm:mt-0 gap-2">
-                <button 
-                  onClick={() => setTipoGraficoPersonalizado('pizza')}
-                  className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'pizza' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
-                  title="Gráfico de pizza"
-                >
-                  {chartIcons.pizza}
-                </button>
-                <button 
-                  onClick={() => setTipoGraficoPersonalizado('treemap')}
-                  className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'treemap' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
-                  title="Gráfico de árvore"
-                >
-                  {chartIcons.treemap}
-                </button>
-                <button 
-                  onClick={() => setTipoGraficoPersonalizado('dispersao')}
-                  className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'dispersao' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
-                  title="Gráfico de dispersão"
-                >
-                  {chartIcons.dispersao}
-                </button>
-                <button 
-                  onClick={() => setTipoGraficoPersonalizado('radar')}
-                  className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'radar' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
-                  title="Gráfico de radar"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8zm1 3H9v2h4v2h2V9c0-1.1-.9-2-2-2zm1.5 9l-2.25-4h-1.5L10.5 16H9l2 4h4l2-4h-1.5z" />
-                  </svg>
-                </button>
-                <button 
-                  onClick={() => setTipoGraficoPersonalizado('composto')}
-                  className={`p-2 rounded-md ${tipoGraficoPersonalizado === 'composto' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}
-                  title="Gráfico composto"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                    <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm2 4v-2H3v2h2zm16-2h-6v2h6v-2zm-8 2h2v-2h-2v2zm-4 0h2v-2H9v2zM5 3H3v2h2V3zm4 0H7v2h2V3zm4 0h-2v2h2V3zm8 0h-6v2h6V3zm0 4h-6v2h6V7zm0 4h-6v2h6v-2zM5 7H3v2h2V7zm4 0H7v2h2V7zm4 0h-2v2h2V7z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            {/* Opções de insights */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
-              <button
-                onClick={() => setInsightAtivo('vendas')}
-                className={`flex items-center justify-center p-3 rounded-lg ${
-                  insightAtivo === 'vendas' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'
-                }`}
-              >
-                <FaLightbulb className="mr-2" /> Vendas e Receita
-              </button>
-              <button
-                onClick={() => setInsightAtivo('preco-estoque')}
-                className={`flex items-center justify-center p-3 rounded-lg ${
-                  insightAtivo === 'preco-estoque' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'
-                }`}
-              >
-                <FaLightbulb className="mr-2" /> Preço vs Estoque
-              </button>
-              <button
-                onClick={() => setInsightAtivo('rentabilidade')}
-                className={`flex items-center justify-center p-3 rounded-lg ${
-                  insightAtivo === 'rentabilidade' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'
-                }`}
-              >
-                <FaLightbulb className="mr-2" /> Rentabilidade
-              </button>
-              <button
-                onClick={() => setInsightAtivo('avaliacao-vendas')}
-                className={`flex items-center justify-center p-3 rounded-lg ${
-                  insightAtivo === 'avaliacao-vendas' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'
-                }`}
-              >
-                <FaLightbulb className="mr-2" /> Avaliação vs Vendas
-              </button>
-              <button
-                onClick={() => setInsightAtivo('estoque-rotatividade')}
-                className={`flex items-center justify-center p-3 rounded-lg ${
-                  insightAtivo === 'estoque-rotatividade' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'
-                }`}
-              >
-                <FaLightbulb className="mr-2" /> Estoque x Rotatividade
-              </button>
-            </div>
-
-            {/* Área do gráfico */}
-            <div className="h-[450px] w-full mt-4 flex items-center justify-center bg-gray-900 rounded-lg p-4 border border-gray-700">
-              {dadosAnaliseProdutos.length > 0 ? (
-                renderizarGraficoInterativo()
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
-                  <p className="text-gray-400">Carregando dados para análise...</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Insights e interpretações */}
-            <div className="mt-6 p-4 bg-gray-800 rounded-lg text-sm text-gray-200">
-              <h4 className="font-medium mb-2 text-indigo-300">Insights:</h4>
-              {insightAtivo === 'vendas' && (
-                <p>Análise de vendas e receita dos produtos. Você pode identificar quais produtos têm alto volume de vendas mas receita proporcionalmente menor, indicando possível ajuste de preços.</p>
-              )}
-              {insightAtivo === 'preco-estoque' && (
-                <p>Relação entre preço e quantidade em estoque. Produtos com alto preço e alto estoque podem representar capital parado, enquanto produtos com baixo estoque e alto preço podem precisar de reposição prioritária.</p>
-              )}
-              {insightAtivo === 'rentabilidade' && (
-                <p>Análise da margem de lucro e rentabilidade. Produtos com alta margem mas baixo volume de vendas podem se beneficiar de promoções, enquanto produtos com baixa margem e alto volume podem ter preços ajustados.</p>
-              )}
-              {insightAtivo === 'avaliacao-vendas' && (
-                <p>Correlação entre a avaliação dos clientes e o volume de vendas. Identifique produtos bem avaliados com vendas abaixo do esperado (oportunidades de marketing) ou produtos com vendas altas mas avaliações baixas (riscos de reputação).</p>
-              )}
-              {insightAtivo === 'estoque-rotatividade' && (
-                <p>Análise da relação entre níveis de estoque e rotatividade de vendas. Produtos com alto estoque e baixa rotatividade podem indicar problemas de planejamento, enquanto produtos com estoque baixo e alta rotatividade podem precisar de reposição mais frequente.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Adicionar novas seções na análise personalizada */}
+          {/* Seções adicionais de análise */}
           <section className="mt-8">
             <div className="bg-gradient-to-r from-indigo-800 to-purple-800 rounded-lg p-4 shadow-lg mb-4">
               <h2 className="text-xl font-bold flex items-center">
-                <FaLightbulb className="mr-2" /> Análise Personalizada
+                <FaLightbulb className="mr-2" /> Análises de Inventário
               </h2>
               <p className="text-sm text-gray-200 mt-1">
-                Visualize insights profundos com base nos dados e descubra oportunidades para impulsionar seus resultados.
+                Visualize insights profundos do seu inventário e descubra oportunidades para otimizar seu estoque.
               </p>
             </div>
 
@@ -1828,70 +1801,6 @@ export default function Dashboard() {
             {mostrarDimensoes && renderizarAnaliseDimensoes()}
             {mostrarVariacoesCores && renderizarAnaliseCoresTamanhos()}
             {mostrarAnaliseEspacial && renderizarAnaliseTags()}
-            
-            <div className="bg-gray-800 rounded-lg shadow-md p-4 mt-8">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <FaLightbulb className="mr-2" /> Insights Principais das Novas Análises
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-700 p-4 rounded-md">
-                  <h4 className="font-medium text-indigo-300 flex items-center">
-                    <FiBox className="mr-2" /> Dimensões e Espaço
-                  </h4>
-                  <p className="text-gray-300 mt-2 text-sm">
-                    Produtos de {correlacaoDimensoesVendas.correlacao > 0 ? 'maior' : 'menor'} volume tendem a ter 
-                    {correlacaoDimensoesVendas.correlacao > 0 ? ' mais' : ' menos'} vendas, com uma correlação de 
-                    {Math.abs(parseFloat(correlacaoDimensoesVendas.correlacao)) > 0.5 ? ' forte' : 
-                     Math.abs(parseFloat(correlacaoDimensoesVendas.correlacao)) > 0.3 ? ' moderada' : ' fraca'} 
-                    ({correlacaoDimensoesVendas.correlacao}). Otimize seu estoque considerando o volume médio de {analiseDimensoes.volumeMedio} cm³.
-                  </p>
-                </div>
-                
-                <div className="bg-gray-700 p-4 rounded-md">
-                  <h4 className="font-medium text-indigo-300 flex items-center">
-                    <FiTag className="mr-2" /> Performance de Tags
-                  </h4>
-                  <p className="text-gray-300 mt-2 text-sm">
-                    As tags mais associadas a vendas altas são {analiseTags.length > 0 ? 
-                      `"${analiseTags[0]?.tag}", "${analiseTags[1]?.tag}" e "${analiseTags[2]?.tag}"` : 
-                      'indisponíveis'}. 
-                    Produtos com estas tags convertem em média {analiseTags.length > 0 ? 
-                      `${(parseFloat(analiseTags[0]?.taxaConversao) + parseFloat(analiseTags[1]?.taxaConversao) + parseFloat(analiseTags[2]?.taxaConversao))/3}%` : 
-                      '0%'} melhor que os demais.
-                  </p>
-                </div>
-                
-                <div className="bg-gray-700 p-4 rounded-md">
-                  <h4 className="font-medium text-indigo-300 flex items-center">
-                    <FaPalette className="mr-2" /> Preferência de Cores e Tamanhos
-                  </h4>
-                  <p className="text-gray-300 mt-2 text-sm">
-                    {analisePopularidadeCores.length > 0 ? `A cor "${analisePopularidadeCores[0]?.cor}" é a mais popular,` : 'Dados de cores insuficientes,'} 
-                    representando {analisePopularidadeCores.length > 0 ? 
-                      `${((analisePopularidadeCores[0]?.vendas / produtos.reduce((acc, prod) => acc + (prod.vendasTotais || 0), 0)) * 100).toFixed(1)}%` : 
-                      '0%'} das vendas totais.
-                    {analisePopularidadeTamanhos.length > 0 ? ` O tamanho "${analisePopularidadeTamanhos[0]?.tamanho}" é o mais vendido` : ''}. 
-                    Considere expandir suas variações nestas características.
-                  </p>
-                </div>
-                
-                <div className="bg-gray-700 p-4 rounded-md">
-                  <h4 className="font-medium text-indigo-300 flex items-center">
-                    <FiLayers className="mr-2" /> Otimização de Portfólio
-                  </h4>
-                  <p className="text-gray-300 mt-2 text-sm">
-                    Produtos com a combinação de {analisePopularidadeCores.length > 0 && analisePopularidadeTamanhos.length > 0 ? 
-                      `cor "${analisePopularidadeCores[0]?.cor}" e tamanho "${analisePopularidadeTamanhos[0]?.tamanho}"` : 
-                      'cores e tamanhos populares'} apresentam melhor performance. 
-                    As dimensões médias ideais para novos produtos são aproximadamente 
-                    {analiseDimensoes.medidasMedias ? 
-                      ` ${analiseDimensoes.medidasMedias.altura}×${analiseDimensoes.medidasMedias.largura}×${analiseDimensoes.medidasMedias.comprimento} cm` : 
-                      ' indisponíveis'}.
-                  </p>
-                </div>
-              </div>
-            </div>
           </section>
         </div>
       )}

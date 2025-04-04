@@ -1,26 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { FiDownload, FiFileText, FiCalendar, FiBarChart2, FiTrendingUp, FiPackage, FiTag } from 'react-icons/fi';
+import { FiDownload, FiFileText, FiCalendar, FiBarChart2, FiPackage, FiTag, FiAlertCircle, FiActivity, FiDollarSign } from 'react-icons/fi';
 import Header from '../../components/Header';
 
 export default function Relatorios() {
-  const [tipoRelatorio, setTipoRelatorio] = useState('vendas');
+  const [tipoRelatorio, setTipoRelatorio] = useState('estoque');
 
   const relatorios = [
-    {
-      id: 'vendas',
-      nome: 'Relatório de Vendas',
-      descricao: 'Análise detalhada de vendas por período, produto e categoria',
-      icon: <FiTrendingUp className="text-blue-600" />,
-      formatos: ['PDF', 'Excel', 'CSV']
-    },
     {
       id: 'estoque',
       nome: 'Relatório de Estoque',
       descricao: 'Status atual do estoque, produtos com baixo estoque e necessidade de reposição',
       icon: <FiPackage className="text-green-600" />,
       formatos: ['PDF', 'Excel']
+    },
+    {
+      id: 'inventario',
+      nome: 'Valor do Inventário',
+      descricao: 'Relatório detalhado do valor do inventário por produto e categoria',
+      icon: <FiDollarSign className="text-blue-600" />,
+      formatos: ['PDF', 'Excel', 'CSV']
     },
     {
       id: 'produtos',
@@ -32,15 +32,29 @@ export default function Relatorios() {
     {
       id: 'categorias',
       nome: 'Análise por Categoria',
-      descricao: 'Desempenho de vendas e estoque agrupados por categoria',
+      descricao: 'Dados de estoque e valores agrupados por categoria',
       icon: <FiTag className="text-orange-600" />,
       formatos: ['PDF', 'Excel']
     },
     {
-      id: 'performance',
-      nome: 'Performance de Produtos',
-      descricao: 'Análise de desempenho comparativa entre produtos',
-      icon: <FiBarChart2 className="text-red-600" />,
+      id: 'rotatividade',
+      nome: 'Rotatividade de Estoque',
+      descricao: 'Análise da rotatividade de produtos em estoque',
+      icon: <FiActivity className="text-teal-600" />,
+      formatos: ['PDF', 'Excel']
+    },
+    {
+      id: 'expiracoes',
+      nome: 'Produtos com Expiração Próxima',
+      descricao: 'Lista de produtos com data de expiração se aproximando',
+      icon: <FiAlertCircle className="text-red-600" />,
+      formatos: ['PDF', 'Excel', 'CSV']
+    },
+    {
+      id: 'baixoestoque',
+      nome: 'Produtos em Baixo Estoque',
+      descricao: 'Relatório de produtos que precisam de reposição',
+      icon: <FiBarChart2 className="text-amber-600" />,
       formatos: ['PDF', 'Excel', 'PowerPoint']
     }
   ];
@@ -60,7 +74,7 @@ export default function Relatorios() {
           </div>
           
           {/* Lista de relatórios disponíveis */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
             {relatorios.map((relatorio) => (
               <button
                 key={relatorio.id}
@@ -180,8 +194,8 @@ export default function Relatorios() {
                 </thead>
                 <tbody className="divide-y divide-gray-700">
                   <tr className="hover:bg-gray-750">
-                    <td className="py-4 px-6 whitespace-nowrap font-medium text-indigo-300">Vendas Mensais - Março 2024</td>
-                    <td className="py-4 px-6 whitespace-nowrap">Vendas</td>
+                    <td className="py-4 px-6 whitespace-nowrap font-medium text-indigo-300">Estoque Completo - Abril 2024</td>
+                    <td className="py-4 px-6 whitespace-nowrap">Estoque</td>
                     <td className="py-4 px-6 whitespace-nowrap">15/04/2024</td>
                     <td className="py-4 px-6 whitespace-nowrap">PDF</td>
                     <td className="py-4 px-6 whitespace-nowrap text-center">
@@ -189,8 +203,8 @@ export default function Relatorios() {
                     </td>
                   </tr>
                   <tr className="hover:bg-gray-750">
-                    <td className="py-4 px-6 whitespace-nowrap font-medium text-indigo-300">Estoque Atualizado - Q1 2024</td>
-                    <td className="py-4 px-6 whitespace-nowrap">Estoque</td>
+                    <td className="py-4 px-6 whitespace-nowrap font-medium text-indigo-300">Valor do Inventário - Q1 2024</td>
+                    <td className="py-4 px-6 whitespace-nowrap">Inventário</td>
                     <td className="py-4 px-6 whitespace-nowrap">05/04/2024</td>
                     <td className="py-4 px-6 whitespace-nowrap">Excel</td>
                     <td className="py-4 px-6 whitespace-nowrap text-center">
@@ -198,10 +212,10 @@ export default function Relatorios() {
                     </td>
                   </tr>
                   <tr className="hover:bg-gray-750">
-                    <td className="py-4 px-6 whitespace-nowrap font-medium text-indigo-300">Catálogo de Produtos - Atualizado</td>
-                    <td className="py-4 px-6 whitespace-nowrap">Produtos</td>
+                    <td className="py-4 px-6 whitespace-nowrap font-medium text-indigo-300">Produtos com Baixo Estoque - Março 2024</td>
+                    <td className="py-4 px-6 whitespace-nowrap">Baixo Estoque</td>
                     <td className="py-4 px-6 whitespace-nowrap">01/04/2024</td>
-                    <td className="py-4 px-6 whitespace-nowrap">JSON</td>
+                    <td className="py-4 px-6 whitespace-nowrap">CSV</td>
                     <td className="py-4 px-6 whitespace-nowrap text-center">
                       <button className="px-3 py-1 text-indigo-300 hover:text-indigo-100">Download</button>
                     </td>

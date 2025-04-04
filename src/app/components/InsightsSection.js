@@ -3,7 +3,8 @@
 import React, { useMemo } from 'react';
 import { 
   FiPackage, FiAlertCircle, FiDollarSign, FiBarChart2, 
-  FiTag, FiStar, FiTrendingUp, FiActivity, FiGift, FiClock 
+  FiTag, FiStar, FiTrendingUp, FiActivity, FiGift, FiClock, 
+  FiCalendar, FiTrendingDown, FiShield
 } from 'react-icons/fi';
 import { formataMoeda } from '../utils/insightData';
 import { 
@@ -21,10 +22,13 @@ const InsightsSection = ({ produtos }) => {
         produtosBaixoEstoque: [],
         produtosExcessoEstoque: [],
         produtosMaiorValor: [],
+        produtosExpirando: [],
         estoqueTotal: 0,
         valorTotalEstoque: 0,
         mediaRatingPorCategoria: [],
-        produtosRecomendados: []
+        produtosRecomendados: [],
+        diasMediaGarantia: 0,
+        produtosDestaqueCategoria: []
       };
     }
 
@@ -32,10 +36,16 @@ const InsightsSection = ({ produtos }) => {
     const categorias = {};
     let estoqueTotal = 0;
     let valorTotalEstoque = 0;
+    let somaGarantiaDias = 0;
 
     produtos.forEach(produto => {
       estoqueTotal += produto.quantidadeProduto;
       valorTotalEstoque += produto.quantidadeProduto * produto.precoProduto;
+      
+      // Calcular soma de garantias (se disponível)
+      if (produto.periodoGarantia) {
+        somaGarantiaDias += produto.periodoGarantia;
+      }
 
       // Agrupar por categoria
       if (!categorias[produto.categoriaProduto]) {
@@ -89,6 +99,31 @@ const InsightsSection = ({ produtos }) => {
       }))
       .sort((a, b) => b.valorEstoque - a.valorEstoque)
       .slice(0, 5);
+      
+    // Verificar produtos próximos à expiração (se tiver data de expiração)
+    const hoje = new Date();
+    const tresMesesAdiante = new Date();
+    tresMesesAdiante.setMonth(hoje.getMonth() + 3);
+    
+    const produtosExpirando = [...produtos]
+      .filter(p => {
+        if (p.dataExpiracao && p.dataExpiracao !== 'N/A') {
+          try {
+            const [dia, mes, ano] = p.dataExpiracao.split('/');
+            const dataExpiracao = new Date(ano, mes - 1, dia);
+            return dataExpiracao > hoje && dataExpiracao < tresMesesAdiante;
+          } catch (e) {
+            return false;
+          }
+        }
+        return false;
+      })
+      .sort((a, b) => {
+        const [diaA, mesA, anoA] = a.dataExpiracao.split('/');
+        const [diaB, mesB, anoB] = b.dataExpiracao.split('/');
+        return new Date(anoA, mesA - 1, diaA) - new Date(anoB, mesB - 1, diaB);
+      })
+      .slice(0, 5);
 
     // Média de rating por categoria
     const mediaRatingPorCategoria = categoriaArray.map(cat => ({
@@ -96,6 +131,21 @@ const InsightsSection = ({ produtos }) => {
       rating: cat.mediaRating,
       totalProdutos: cat.produtos.length
     })).sort((a, b) => b.rating - a.rating);
+    
+    // Destaque de produtos por categoria
+    const produtosDestaqueCategoria = categoriaArray.map(cat => {
+      // Encontrar o produto mais bem avaliado de cada categoria
+      const produtoDestaque = [...cat.produtos]
+        .sort((a, b) => b.ratingProduto - a.ratingProduto)[0];
+      
+      return {
+        categoria: cat.nome,
+        produtoNome: produtoDestaque.nome,
+        rating: produtoDestaque.ratingProduto,
+        estoque: produtoDestaque.quantidadeProduto,
+        id: produtoDestaque.id
+      };
+    }).sort((a, b) => b.rating - a.rating).slice(0, 5);
 
     // Gerar recomendações baseadas nos insights
     const produtosRecomendados = [];
@@ -123,16 +173,31 @@ const InsightsSection = ({ produtos }) => {
         });
       });
     }
+    
+    // Se temos produtos expirando em breve
+    if (produtosExpirando.length > 0) {
+      produtosExpirando.forEach(produto => {
+        produtosRecomendados.push({
+          id: produto.id,
+          nome: produto.nome,
+          tipo: 'expiracao',
+          mensagem: `Atenção à validade: expira em ${produto.dataExpiracao}`
+        });
+      });
+    }
 
     return {
       categoriasMaisEstoque,
       produtosBaixoEstoque,
       produtosExcessoEstoque,
       produtosMaiorValor,
+      produtosExpirando,
       estoqueTotal,
       valorTotalEstoque,
       mediaRatingPorCategoria,
-      produtosRecomendados
+      produtosRecomendados,
+      diasMediaGarantia: produtos.length > 0 ? Math.round(somaGarantiaDias / produtos.length) : 0,
+      produtosDestaqueCategoria
     };
   }, [produtos]);
 
@@ -200,176 +265,181 @@ const InsightsSection = ({ produtos }) => {
           </div>
           <p className="text-red-200 text-xs mt-2">
             {insights.produtosBaixoEstoque.length > 0 ? 
-              `Crítico: ${insights.produtosBaixoEstoque[0].nome} (${insights.produtosBaixoEstoque[0].quantidadeProduto} unidades)` : 
-              'Todos produtos com estoque adequado'}
+              `Crítico: ${insights.produtosBaixoEstoque[0].nome}` : 
+              'Nenhum produto com estoque crítico'}
           </p>
         </div>
 
-        {/* Avaliação Média */}
-        <div className="bg-gradient-to-br from-amber-900 to-amber-700 rounded-lg p-4 shadow-lg">
+        {/* Média de Avaliações */}
+        <div className="bg-gradient-to-br from-yellow-900 to-yellow-700 rounded-lg p-4 shadow-lg">
           <div className="flex justify-between">
             <div>
-              <p className="text-amber-200 text-sm">Avaliação Média</p>
-              <p className="text-white text-2xl font-bold">
-                {(produtos.reduce((sum, p) => sum + p.ratingProduto, 0) / produtos.length).toFixed(1)}
-              </p>
+              <p className="text-yellow-200 text-sm">Produtos Expirando</p>
+              <p className="text-white text-2xl font-bold">{insights.produtosExpirando.length}</p>
             </div>
-            <div className="bg-amber-600/30 p-3 rounded-lg">
-              <FiStar className="text-amber-200 text-xl" />
+            <div className="bg-yellow-600/30 p-3 rounded-lg">
+              <FiCalendar className="text-yellow-200 text-xl" />
             </div>
           </div>
-          <p className="text-amber-200 text-xs mt-2">
-            {insights.mediaRatingPorCategoria.length > 0 ? 
-              `Melhor categoria: ${insights.mediaRatingPorCategoria[0].categoria} (${insights.mediaRatingPorCategoria[0].rating.toFixed(1)})` : 
-              'Sem dados de avaliação'}
+          <p className="text-yellow-200 text-xs mt-2">
+            {insights.produtosExpirando.length > 0 ? 
+              `Próximo: ${insights.produtosExpirando[0].nome}` : 
+              'Nenhum produto próximo ao vencimento'}
           </p>
         </div>
       </div>
 
-      {/* Gráficos de Inventário */}
+      {/* Gráficos de análise */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Gráfico de Estoque por Categoria */}
-        <div className="bg-gray-800 rounded-lg p-5 shadow-lg">
-          <h3 className="text-white text-lg font-semibold mb-4">Estoque por Categoria</h3>
+        {/* Categorias com mais estoque */}
+        <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+          <h3 className="text-lg font-medium text-indigo-300 mb-4">Estoque por Categoria</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={insights.categoriasMaisEstoque}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                layout="vertical"
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-                <XAxis type="number" tick={{fill: "#cbd5e0"}} />
-                <YAxis dataKey="nome" type="category" width={80} tick={{fill: "#cbd5e0"}} />
-                <Tooltip 
-                  formatter={(value) => [value.toLocaleString(), 'Quantidade']} 
+                <XAxis 
+                  dataKey="nome" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={80} 
+                  tick={{ fill: '#cbd5e0' }}
+                />
+                <YAxis tick={{ fill: '#cbd5e0' }} />
+                <Tooltip
+                  formatter={(value, name) => {
+                    if (name === 'estoque') return [value, 'Unidades em Estoque'];
+                    if (name === 'valor') return [formataMoeda(value), 'Valor do Estoque'];
+                    return [value, name];
+                  }}
                   contentStyle={{ backgroundColor: '#171e2e', borderColor: '#2d3748', color: '#f0f4f8' }}
                 />
-                <Legend formatter={(value) => <span style={{ color: '#cbd5e0' }}>{value}</span>} />
-                <Bar dataKey="estoque" fill="#6c63ff" name="Estoque" />
+                <Legend />
+                <Bar dataKey="estoque" fill="#8a85f7" name="Estoque" />
+                <Bar dataKey="valor" fill="#82e9c1" name="Valor (R$)" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Gráfico de Valor por Categoria */}
-        <div className="bg-gray-800 rounded-lg p-5 shadow-lg">
-          <h3 className="text-white text-lg font-semibold mb-4">Valor do Estoque por Categoria</h3>
+        {/* Média de avaliação por categoria */}
+        <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+          <h3 className="text-lg font-medium text-indigo-300 mb-4">Qualidade por Categoria</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={insights.categoriasMaisEstoque}
+                  data={insights.mediaRatingPorCategoria}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={130}
+                  outerRadius={80}
                   fill="#8884d8"
-                  dataKey="valor"
-                  nameKey="nome"
-                  label={({ nome, percent }) => `${nome}: ${(percent * 100).toFixed(0)}%`}
+                  dataKey="totalProdutos"
+                  nameKey="categoria"
+                  label={({ categoria, rating }) => `${categoria}: ${rating.toFixed(1)}`}
                 >
-                  {insights.categoriasMaisEstoque.map((entry, index) => (
+                  {insights.mediaRatingPorCategoria.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value) => [formataMoeda(value), 'Valor do Estoque']} 
+                  formatter={(value, name, props) => {
+                    if (name === 'totalProdutos') return [value, 'Quantidade de Produtos'];
+                    return [value, name];
+                  }}
                   contentStyle={{ backgroundColor: '#171e2e', borderColor: '#2d3748', color: '#f0f4f8' }}
                 />
-                <Legend formatter={(value) => <span style={{ color: '#cbd5e0' }}>{value}</span>} />
+                <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* Seção de recomendações */}
-      <div className="bg-gray-800 rounded-lg p-5 shadow-lg">
-        <div className="flex items-center mb-4">
-          <FiBarChart2 className="text-indigo-400 mr-2 text-xl" />
-          <h3 className="text-white text-lg font-semibold">Recomendações e Alertas</h3>
-        </div>
+      {/* Alertas e Recomendações */}
+      <div className="bg-gray-800 rounded-lg p-6 shadow-lg mb-6">
+        <h3 className="text-lg font-medium text-indigo-300 mb-4 flex items-center">
+          <FiAlertCircle className="mr-2" /> Alertas e Recomendações
+        </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Reposição de Estoque */}
-          <div className="bg-gray-700/50 rounded-lg p-4">
-            <div className="flex items-center mb-3">
-              <div className="p-2 rounded-md bg-red-500/20 text-red-400 mr-3">
-                <FiAlertCircle />
+        {insights.produtosRecomendados.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {insights.produtosRecomendados.slice(0, 6).map((recomendacao, index) => (
+              <div 
+                key={index} 
+                className={`p-3 rounded-lg flex items-start ${
+                  recomendacao.tipo === 'reposicao' ? 'bg-red-900/30 border border-red-700' : 
+                  recomendacao.tipo === 'excesso' ? 'bg-blue-900/30 border border-blue-700' :
+                  'bg-yellow-900/30 border border-yellow-700'
+                }`}
+              >
+                <div className={`p-2 rounded mr-3 ${
+                  recomendacao.tipo === 'reposicao' ? 'bg-red-800' : 
+                  recomendacao.tipo === 'excesso' ? 'bg-blue-800' :
+                  'bg-yellow-800'
+                }`}>
+                  {recomendacao.tipo === 'reposicao' ? (
+                    <FiTrendingDown className="text-red-300" />
+                  ) : recomendacao.tipo === 'excesso' ? (
+                    <FiTrendingUp className="text-blue-300" />
+                  ) : (
+                    <FiClock className="text-yellow-300" />
+                  )}
+                </div>
+                <div>
+                  <p className={`font-medium ${
+                    recomendacao.tipo === 'reposicao' ? 'text-red-300' : 
+                    recomendacao.tipo === 'excesso' ? 'text-blue-300' :
+                    'text-yellow-300'
+                  }`}>
+                    {recomendacao.nome}
+                  </p>
+                  <p className="text-gray-300 text-sm mt-1">{recomendacao.mensagem}</p>
+                </div>
               </div>
-              <h4 className="text-white font-medium">Reposição de Estoque Urgente</h4>
-            </div>
-            
-            {insights.produtosBaixoEstoque.length > 0 ? (
-              <ul className="space-y-2">
-                {insights.produtosBaixoEstoque.map(produto => (
-                  <li key={produto.id} className="bg-gray-800/50 rounded p-2 text-sm">
-                    <span className="text-indigo-300 font-medium">{produto.nome}</span>
-                    <div className="flex justify-between mt-1 text-xs">
-                      <span className="text-gray-400">Estoque: <span className="text-red-400 font-medium">{produto.quantidadeProduto}</span></span>
-                      <span className="text-gray-400">Preço: <span className="text-green-400 font-medium">{formataMoeda(produto.precoProduto)}</span></span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-400 text-sm">Não há produtos que precisem de reposição urgente.</p>
-            )}
+            ))}
           </div>
+        ) : (
+          <p className="text-gray-400">Nenhuma recomendação disponível no momento.</p>
+        )}
+      </div>
 
-          {/* Produtos com excesso de estoque */}
-          <div className="bg-gray-700/50 rounded-lg p-4">
-            <div className="flex items-center mb-3">
-              <div className="p-2 rounded-md bg-amber-500/20 text-amber-400 mr-3">
-                <FiTag />
-              </div>
-              <h4 className="text-white font-medium">Excesso de Estoque</h4>
-            </div>
-            
-            {insights.produtosExcessoEstoque.length > 0 ? (
-              <ul className="space-y-2">
-                {insights.produtosExcessoEstoque.map(produto => (
-                  <li key={produto.id} className="bg-gray-800/50 rounded p-2 text-sm">
-                    <span className="text-indigo-300 font-medium">{produto.nome}</span>
-                    <div className="flex justify-between mt-1 text-xs">
-                      <span className="text-gray-400">Estoque: <span className="text-amber-400 font-medium">{produto.quantidadeProduto}</span></span>
-                      <span className="text-gray-400">Valor: <span className="text-green-400 font-medium">{formataMoeda(produto.quantidadeProduto * produto.precoProduto)}</span></span>
-                    </div>
-                  </li>
+      {/* Destaque de produtos por categoria */}
+      <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+        <h3 className="text-lg font-medium text-indigo-300 mb-4 flex items-center">
+          <FiStar className="mr-2" /> Produtos em Destaque por Categoria
+        </h3>
+        
+        {insights.produtosDestaqueCategoria.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Categoria</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Produto</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Avaliação</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Estoque</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {insights.produtosDestaqueCategoria.map((destaque, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{destaque.categoria}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{destaque.produtoNome}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-300">{destaque.rating.toFixed(1)}/5</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-300">{destaque.estoque}</td>
+                  </tr>
                 ))}
-              </ul>
-            ) : (
-              <p className="text-gray-400 text-sm">Não há produtos com excesso de estoque.</p>
-            )}
+              </tbody>
+            </table>
           </div>
-        </div>
-
-        {/* Produtos com maior valor em estoque */}
-        <div className="mt-4 bg-gray-700/50 rounded-lg p-4">
-          <div className="flex items-center mb-3">
-            <div className="p-2 rounded-md bg-green-500/20 text-green-400 mr-3">
-              <FiDollarSign />
-            </div>
-            <h4 className="text-white font-medium">Produtos com Maior Valor em Estoque</h4>
-          </div>
-          
-          {insights.produtosMaiorValor.length > 0 ? (
-            <ul className="space-y-2">
-              {insights.produtosMaiorValor.map(produto => (
-                <li key={produto.id} className="bg-gray-800/50 rounded p-2 text-sm">
-                  <span className="text-indigo-300 font-medium">{produto.nome}</span>
-                  <div className="flex justify-between mt-1 text-xs">
-                    <span className="text-gray-400">Estoque: <span className="text-blue-400 font-medium">{produto.quantidadeProduto}</span></span>
-                    <span className="text-gray-400">Valor Total: <span className="text-green-400 font-medium">{formataMoeda(produto.valorEstoque)}</span></span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">Não foi possível calcular o valor do estoque.</p>
-          )}
-        </div>
+        ) : (
+          <p className="text-gray-400">Nenhum produto em destaque disponível.</p>
+        )}
       </div>
     </div>
   );
